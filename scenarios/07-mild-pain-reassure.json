@@ -1,0 +1,10 @@
+{
+  "name": "Mild pain 2, no red flags -> no escalation required, reassure",
+  "now": "2026-10-01T14:00:00Z",
+  "lastRun": "2026-10-01T09:00:00Z",
+  "currentLevel": null,
+  "facts": [
+    { "kind": "pain", "value": 2, "at": "2026-10-01T13:30:00Z", "source": "Patient" }
+  ],
+  "expect": { "Pain Now": 2, "Proposed Level": "No escalation required", "New Level": null, "Disposition": "Reassure" }
+}

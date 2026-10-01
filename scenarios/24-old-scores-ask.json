@@ -1,0 +1,11 @@
+{
+  "name": "Scores are 3 weeks old -> ask PHQ-9 / GAD-7; severity unknown",
+  "rule": "MoodScreening",
+  "now": "2026-10-01T14:00:00Z",
+  "currentLevel": null,
+  "facts": [
+    { "kind": "phq9", "value": 16, "at": "2026-09-10T10:00:00Z", "source": "Patient" },
+    { "kind": "gad7", "value": 11, "at": "2026-09-10T10:05:00Z", "source": "Patient" }
+  ],
+  "expect": { "Ask PHQ-9": true, "Ask GAD-7": true, "PHQ-9 Score": null, "PHQ-9 Severity": null, "Proposed Level": null, "Disposition": "Ask PHQ-9 / GAD-7" }
+}

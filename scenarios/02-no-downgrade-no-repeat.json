@@ -1,0 +1,10 @@
+{
+  "name": "Pain 8 now, already at Emergency escalation -> provider evaluation, no repeat alert",
+  "now": "2026-10-01T14:00:00Z",
+  "lastRun": "2026-10-01T09:00:00Z",
+  "currentLevel": "Emergency escalation",
+  "facts": [
+    { "kind": "pain", "value": 8, "at": "2026-10-01T13:55:00Z", "source": "Patient" }
+  ],
+  "expect": { "Proposed Level": "Emergency escalation", "New Level": null, "Disposition": "Provider evaluation required" }
+}

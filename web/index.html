@@ -1,0 +1,1896 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CQL Clinical Rules Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap">
+<style>
+/* Layout: a patient chat and a clinical workbench. Palette: deep emerald sea (#0C433C pigment, #07594A wave, #041716 depth). */
+:root {
+  --bg: #EDF2F0;
+  --surface: #FFFFFF;
+  --surface-2: #F3F7F5;
+  --ink: #0D2A26;
+  --muted: #536862;
+  --line: #D1DEDA;
+  --accent: #0B5C4C;
+  --accent-soft: #D8EBE5;
+  --on-accent: #FFFFFF;
+  --amber: #965A0A;
+  --amber-soft: #FBEBD3;
+  --pass: #1B704A;
+  --pass-soft: #DCF0E4;
+  --fail: #AE2530;
+  --fail-soft: #FBE1E2;
+  --code-bg: #FBFCFB;
+  --code-gutter: #EFF4F2;
+  --tok-keyword: #6B3FA0;
+  --tok-def: #0B5C4C;
+  --tok-string: #965A0A;
+  --tok-number: #1F5FA8;
+  --tok-comment: #768983;
+  --tok-builtin: #0E6782;
+  /* The chat is always a deep sea, in both themes */
+  --sea-deep: #041716;
+  --sea: #0C433C;
+  --sea-wave: #07594A;
+  --sea-crest: #3FB59A;
+  --sea-ink: #E3F4EE;
+  --sea-muted: #9CC7BB;
+  --sea-line: rgba(227, 244, 238, 0.14);
+  --bubble: #FFFFFF;
+  --bubble-ink: #0D2A26;
+  --bubble-me: #12806A;
+  --glow-none: #4ADE9B;
+  --glow-urgent: #F2D04B;
+  --glow-emergency: #F59E3B;
+  --glow-ed: #EF4B4B;
+  --glow-ask: #7DD3C0;
+  --font-ui: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-code: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-title: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --radius: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #041716; --surface: #0A2622; --surface-2: #071E1B; --ink: #E2EFEB; --muted: #8FAAA3; --line: #1D3F39;
+    --accent: #52C4A6; --accent-soft: #0F3B33; --on-accent: #041716; --amber: #E8B467; --amber-soft: #3A2C15;
+    --pass: #6FCB98; --pass-soft: #12362A; --fail: #F28A8F; --fail-soft: #43191C;
+    --code-bg: #071E1B; --code-gutter: #061A17;
+    --tok-keyword: #C7A6F2; --tok-def: #52C4A6; --tok-string: #E8B467; --tok-number: #8DBAF2; --tok-comment: #6F8A84; --tok-builtin: #7CC6E0;
+    --bubble: #0E302B; --bubble-ink: #E2EFEB;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #041716; --surface: #0A2622; --surface-2: #071E1B; --ink: #E2EFEB; --muted: #8FAAA3; --line: #1D3F39;
+  --accent: #52C4A6; --accent-soft: #0F3B33; --on-accent: #041716; --amber: #E8B467; --amber-soft: #3A2C15;
+  --pass: #6FCB98; --pass-soft: #12362A; --fail: #F28A8F; --fail-soft: #43191C;
+  --code-bg: #071E1B; --code-gutter: #061A17;
+  --tok-keyword: #C7A6F2; --tok-def: #52C4A6; --tok-string: #E8B467; --tok-number: #8DBAF2; --tok-comment: #6F8A84; --tok-builtin: #7CC6E0;
+  --bubble: #0E302B; --bubble-ink: #E2EFEB;
+  color-scheme: dark;
+}
+
+
+.CodeMirror {
+  font-family: monospace;
+  height: 300px;
+  color: black;
+  direction: ltr;
+}
+.CodeMirror-lines {
+  padding: 4px 0; 
+}
+.CodeMirror pre.CodeMirror-line,
+.CodeMirror pre.CodeMirror-line-like {
+  padding: 0 4px; 
+}
+.CodeMirror-scrollbar-filler, .CodeMirror-gutter-filler {
+  background-color: white; 
+}
+.CodeMirror-gutters {
+  border-right: 1px solid #ddd;
+  background-color: #f7f7f7;
+  white-space: nowrap;
+}
+.CodeMirror-linenumbers {}
+.CodeMirror-linenumber {
+  padding: 0 3px 0 5px;
+  min-width: 20px;
+  text-align: right;
+  color: #999;
+  white-space: nowrap;
+}
+.CodeMirror-guttermarker { color: black; }
+.CodeMirror-guttermarker-subtle { color: #999; }
+.CodeMirror-cursor {
+  border-left: 1px solid black;
+  border-right: none;
+  width: 0;
+}
+.CodeMirror div.CodeMirror-secondarycursor {
+  border-left: 1px solid silver;
+}
+.cm-fat-cursor .CodeMirror-cursor {
+  width: auto;
+  border: 0 !important;
+  background: #7e7;
+}
+.cm-fat-cursor div.CodeMirror-cursors {
+  z-index: 1;
+}
+.cm-fat-cursor .CodeMirror-line::selection,
+.cm-fat-cursor .CodeMirror-line > span::selection, 
+.cm-fat-cursor .CodeMirror-line > span > span::selection { background: transparent; }
+.cm-fat-cursor .CodeMirror-line::-moz-selection,
+.cm-fat-cursor .CodeMirror-line > span::-moz-selection,
+.cm-fat-cursor .CodeMirror-line > span > span::-moz-selection { background: transparent; }
+.cm-fat-cursor { caret-color: transparent; }
+@-moz-keyframes blink {
+  0% {}
+  50% { background-color: transparent; }
+  100% {}
+}
+@-webkit-keyframes blink {
+  0% {}
+  50% { background-color: transparent; }
+  100% {}
+}
+@keyframes blink {
+  0% {}
+  50% { background-color: transparent; }
+  100% {}
+}
+.CodeMirror-overwrite .CodeMirror-cursor {}
+.cm-tab { display: inline-block; text-decoration: inherit; }
+.CodeMirror-rulers {
+  position: absolute;
+  left: 0; right: 0; top: -50px; bottom: 0;
+  overflow: hidden;
+}
+.CodeMirror-ruler {
+  border-left: 1px solid #ccc;
+  top: 0; bottom: 0;
+  position: absolute;
+}
+.cm-s-default .cm-header {color: blue;}
+.cm-s-default .cm-quote {color: #090;}
+.cm-negative {color: #d44;}
+.cm-positive {color: #292;}
+.cm-header, .cm-strong {font-weight: bold;}
+.cm-em {font-style: italic;}
+.cm-link {text-decoration: underline;}
+.cm-strikethrough {text-decoration: line-through;}
+.cm-s-default .cm-keyword {color: #708;}
+.cm-s-default .cm-atom {color: #219;}
+.cm-s-default .cm-number {color: #164;}
+.cm-s-default .cm-def {color: #00f;}
+.cm-s-default .cm-variable,
+.cm-s-default .cm-punctuation,
+.cm-s-default .cm-property,
+.cm-s-default .cm-operator {}
+.cm-s-default .cm-variable-2 {color: #05a;}
+.cm-s-default .cm-variable-3, .cm-s-default .cm-type {color: #085;}
+.cm-s-default .cm-comment {color: #a50;}
+.cm-s-default .cm-string {color: #a11;}
+.cm-s-default .cm-string-2 {color: #f50;}
+.cm-s-default .cm-meta {color: #555;}
+.cm-s-default .cm-qualifier {color: #555;}
+.cm-s-default .cm-builtin {color: #30a;}
+.cm-s-default .cm-bracket {color: #997;}
+.cm-s-default .cm-tag {color: #170;}
+.cm-s-default .cm-attribute {color: #00c;}
+.cm-s-default .cm-hr {color: #999;}
+.cm-s-default .cm-link {color: #00c;}
+.cm-s-default .cm-error {color: #f00;}
+.cm-invalidchar {color: #f00;}
+.CodeMirror-composing { border-bottom: 2px solid; }
+div.CodeMirror span.CodeMirror-matchingbracket {color: #0b0;}
+div.CodeMirror span.CodeMirror-nonmatchingbracket {color: #a22;}
+.CodeMirror-matchingtag { background: rgba(255, 150, 0, .3); }
+.CodeMirror-activeline-background {background: #e8f2ff;}
+.CodeMirror {
+  position: relative;
+  overflow: hidden;
+  background: white;
+}
+.CodeMirror-scroll {
+  overflow: scroll !important; 
+  margin-bottom: -50px; margin-right: -50px;
+  padding-bottom: 50px;
+  height: 100%;
+  outline: none; 
+  position: relative;
+  z-index: 0;
+}
+.CodeMirror-sizer {
+  position: relative;
+  border-right: 50px solid transparent;
+}
+.CodeMirror-vscrollbar, .CodeMirror-hscrollbar, .CodeMirror-scrollbar-filler, .CodeMirror-gutter-filler {
+  position: absolute;
+  z-index: 6;
+  display: none;
+  outline: none;
+}
+.CodeMirror-vscrollbar {
+  right: 0; top: 0;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+.CodeMirror-hscrollbar {
+  bottom: 0; left: 0;
+  overflow-y: hidden;
+  overflow-x: scroll;
+}
+.CodeMirror-scrollbar-filler {
+  right: 0; bottom: 0;
+}
+.CodeMirror-gutter-filler {
+  left: 0; bottom: 0;
+}
+.CodeMirror-gutters {
+  position: absolute; left: 0; top: 0;
+  min-height: 100%;
+  z-index: 3;
+}
+.CodeMirror-gutter {
+  white-space: normal;
+  height: 100%;
+  display: inline-block;
+  vertical-align: top;
+  margin-bottom: -50px;
+}
+.CodeMirror-gutter-wrapper {
+  position: absolute;
+  z-index: 4;
+  background: none !important;
+  border: none !important;
+}
+.CodeMirror-gutter-background {
+  position: absolute;
+  top: 0; bottom: 0;
+  z-index: 4;
+}
+.CodeMirror-gutter-elt {
+  position: absolute;
+  cursor: default;
+  z-index: 4;
+}
+.CodeMirror-gutter-wrapper ::selection { background-color: transparent }
+.CodeMirror-gutter-wrapper ::-moz-selection { background-color: transparent }
+.CodeMirror-lines {
+  cursor: text;
+  min-height: 1px; 
+}
+.CodeMirror pre.CodeMirror-line,
+.CodeMirror pre.CodeMirror-line-like {
+  -moz-border-radius: 0; -webkit-border-radius: 0; border-radius: 0;
+  border-width: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  margin: 0;
+  white-space: pre;
+  word-wrap: normal;
+  line-height: inherit;
+  color: inherit;
+  z-index: 2;
+  position: relative;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-variant-ligatures: contextual;
+  font-variant-ligatures: contextual;
+}
+.CodeMirror-wrap pre.CodeMirror-line,
+.CodeMirror-wrap pre.CodeMirror-line-like {
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  word-break: normal;
+}
+.CodeMirror-linebackground {
+  position: absolute;
+  left: 0; right: 0; top: 0; bottom: 0;
+  z-index: 0;
+}
+.CodeMirror-linewidget {
+  position: relative;
+  z-index: 2;
+  padding: 0.1px; 
+}
+.CodeMirror-widget {}
+.CodeMirror-rtl pre { direction: rtl; }
+.CodeMirror-code {
+  outline: none;
+}
+.CodeMirror-scroll,
+.CodeMirror-sizer,
+.CodeMirror-gutter,
+.CodeMirror-gutters,
+.CodeMirror-linenumber {
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+}
+.CodeMirror-measure {
+  position: absolute;
+  width: 100%;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+.CodeMirror-cursor {
+  position: absolute;
+  pointer-events: none;
+}
+.CodeMirror-measure pre { position: static; }
+div.CodeMirror-cursors {
+  visibility: hidden;
+  position: relative;
+  z-index: 3;
+}
+div.CodeMirror-dragcursors {
+  visibility: visible;
+}
+.CodeMirror-focused div.CodeMirror-cursors {
+  visibility: visible;
+}
+.CodeMirror-selected { background: #d9d9d9; }
+.CodeMirror-focused .CodeMirror-selected { background: #d7d4f0; }
+.CodeMirror-crosshair { cursor: crosshair; }
+.CodeMirror-line::selection, .CodeMirror-line > span::selection, .CodeMirror-line > span > span::selection { background: #d7d4f0; }
+.CodeMirror-line::-moz-selection, .CodeMirror-line > span::-moz-selection, .CodeMirror-line > span > span::-moz-selection { background: #d7d4f0; }
+.cm-searching {
+  background-color: #ffa;
+  background-color: rgba(255, 255, 0, .4);
+}
+.cm-force-border { padding-right: .1px; }
+@media print {
+  .CodeMirror div.CodeMirror-cursors {
+    visibility: hidden;
+  }
+}
+.cm-tab-wrap-hack:after { content: ''; }
+span.CodeMirror-selectedtext { background: none; }
+
+
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--ink); }
+body { font: 15px/1.5 var(--font-ui); margin: 0; }
+.page { max-width: 1320px; margin: 0 auto; padding-inline: 20px; padding-block: 24px 48px; display: grid; gap: 20px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+code, kbd, .mono { font-family: var(--font-code); font-size: 0.86em; }
+button { font: inherit; cursor: pointer; }
+button:focus-visible, [role="tab"]:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+
+/* Top bar */
+.top { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: end; justify-content: space-between; }
+.brand { display: grid; gap: 6px; min-width: 0; max-width: 70ch; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.brand h1 { font-family: var(--font-title); font-weight: 600; font-size: clamp(26px, 3.2vw, 34px); line-height: 1.15; }
+.brand p { margin: 0; color: var(--muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--radius); padding: 9px 14px; font-weight: 500; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; padding: 10px 18px; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.primary[disabled] { opacity: 0.6; cursor: progress; }
+.btn.small { padding: 5px 10px; font-size: 13px; }
+.btn.warn { border-color: var(--fail); color: var(--fail); }
+.hint { font-size: 12.5px; color: var(--muted); }
+kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--surface); }
+
+/* Status strip */
+.status { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; }
+.pill { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 4px 12px; font-weight: 600; font-size: 14px; background: var(--surface-2); color: var(--muted); }
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.pill.ok { background: var(--pass-soft); color: var(--pass); }
+.pill.bad { background: var(--fail-soft); color: var(--fail); }
+.pill.busy { background: var(--amber-soft); color: var(--amber); }
+.status .facts { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.status .facts b { color: var(--ink); font-weight: 600; }
+
+/* Workspace */
+.work { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; display: grid; }
+.panel-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.panel-head h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
+.files { display: flex; gap: 4px 14px; flex-wrap: wrap; padding: 10px 12px 0; border-bottom: 1px solid var(--line); background: var(--surface-2); border-radius: var(--radius) var(--radius) 0 0; }
+.file-group { display: flex; gap: 2px; align-items: end; flex-wrap: wrap; min-width: 0; }
+.file-group .label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); padding: 0 6px 9px 2px; }
+.files [role="tab"] { border: 1px solid transparent; border-bottom: none; background: none; color: var(--muted); font-family: var(--font-code); font-size: 12.5px; padding: 7px 10px 8px; border-radius: 6px 6px 0 0; position: relative; top: 1px; display: inline-flex; gap: 6px; align-items: center; }
+.files [role="tab"][aria-selected="true"] { background: var(--code-bg); color: var(--ink); border-color: var(--line); }
+.files [role="tab"] .mark { width: 7px; height: 7px; border-radius: 50%; }
+.files [role="tab"] .mark.pass { background: var(--pass); }
+.files [role="tab"] .mark.fail { background: var(--fail); }
+.files [role="tab"] .mark.err { background: var(--fail); }
+.files [role="tab"] .edited { color: var(--amber); font-weight: 600; }
+.add-scenario { border: 1px dashed var(--line); background: none; color: var(--accent); font-size: 12.5px; padding: 5px 9px; border-radius: 6px; margin-bottom: 4px; }
+
+.editor-wrap { min-width: 0; }
+.file-note { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 10px 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.CodeMirror { height: 560px; font-family: var(--font-code); font-size: 13px; line-height: 1.55; background: var(--code-bg); color: var(--ink); }
+.CodeMirror-gutters { background: var(--code-gutter); border-right: 1px solid var(--line); }
+.CodeMirror-linenumber { color: var(--muted); font-variant-numeric: tabular-nums; }
+.CodeMirror-cursor { border-left-color: var(--ink); }
+.CodeMirror-selected, .CodeMirror-focused .CodeMirror-selected { background: var(--accent-soft); }
+.CodeMirror-activeline-background { background: var(--surface-2); }
+.cm-s-demo .cm-keyword { color: var(--tok-keyword); font-weight: 600; }
+.cm-s-demo .cm-def { color: var(--tok-def); }
+.cm-s-demo .cm-string { color: var(--tok-string); }
+.cm-s-demo .cm-number { color: var(--tok-number); }
+.cm-s-demo .cm-comment { color: var(--tok-comment); font-style: italic; }
+.cm-s-demo .cm-builtin { color: var(--tok-builtin); }
+.cm-s-demo .cm-atom { color: var(--tok-number); }
+.cm-s-demo .cm-property { color: var(--tok-def); }
+.cm-err-line { background: var(--fail-soft); }
+.cm-flash-line { background: var(--amber-soft); }
+textarea.fallback { width: 100%; height: 560px; border: 0; padding: 12px 16px; resize: vertical; font: 13px/1.55 var(--font-code); background: var(--code-bg); color: var(--ink); tab-size: 2; }
+
+/* Results */
+.results { display: grid; gap: 0; }
+.block { padding: 14px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+.block:last-child { border-bottom: 0; }
+.block h3 { font-size: 13px; font-weight: 600; color: var(--muted); }
+.libs { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.lib { display: inline-flex; gap: 6px; align-items: center; font-family: var(--font-code); font-size: 12.5px; }
+.tag { font: 600 11px/1 var(--font-ui); letter-spacing: 0.05em; padding: 4px 7px; border-radius: 4px; }
+.tag.pass { background: var(--pass-soft); color: var(--pass); }
+.tag.fail { background: var(--fail-soft); color: var(--fail); }
+.tag.muted { background: var(--surface-2); color: var(--muted); }
+.errors { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.errors button { width: 100%; text-align: left; border: 1px solid var(--fail-soft); background: var(--fail-soft); color: var(--ink); border-radius: 6px; padding: 8px 10px; display: grid; gap: 2px; }
+.errors button:hover { border-color: var(--fail); }
+.errors .where { font-family: var(--font-code); font-size: 12.5px; color: var(--fail); font-weight: 600; }
+.errors .msg { font-size: 13.5px; }
+.empty { color: var(--muted); font-size: 13.5px; }
+
+.scen { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.scen + .scen { margin-top: 8px; }
+.scen summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 12px; }
+.scen summary::-webkit-details-marker { display: none; }
+.scen summary .name { min-width: 0; display: grid; }
+.scen summary .file { font-family: var(--font-code); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.scen summary .title { font-size: 14px; overflow-wrap: anywhere; }
+.scen summary .chev { color: var(--muted); transition: transform 120ms ease; }
+.scen[open] summary .chev { transform: rotate(90deg); }
+.scen .body { padding: 0 12px 12px; display: grid; gap: 10px; }
+.fails { margin: 0; padding: 8px 10px; list-style: none; background: var(--fail-soft); border-radius: 6px; font-size: 13.5px; display: grid; gap: 3px; }
+.fails code { color: var(--fail); font-weight: 600; }
+.trace-wrap { overflow-x: auto; }
+table.trace { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.trace th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+table.trace td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.trace tr:last-child td { border-bottom: 0; }
+table.trace td.step { font-family: var(--font-code); font-size: 12.5px; white-space: nowrap; }
+table.trace td.val { font-family: var(--font-code); font-size: 12.5px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+table.trace tr.checked td.step::after { content: " ✓"; color: var(--pass); }
+table.trace tr.bad td { background: var(--fail-soft); }
+table.trace tr.bad td.val::after { content: attr(data-want); display: block; color: var(--fail); font-family: var(--font-ui); font-size: 12px; }
+.null { color: var(--muted); font-style: italic; }
+
+/* Exercises */
+.exercises { display: grid; gap: 14px; }
+.exercises > h2 { font-family: var(--font-title); font-weight: 600; font-size: 22px; }
+.ex-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.ex { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: grid; gap: 10px; align-content: start; }
+.ex .num { font: 600 12px/1 var(--font-code); color: var(--accent); letter-spacing: 0.04em; }
+.ex h3 { font-size: 16px; font-weight: 600; }
+.ex p, .ex ol { margin: 0; font-size: 14px; }
+.ex ol { padding-left: 20px; display: grid; gap: 4px; }
+.ex .expect { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+.ex .row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.legend { display: grid; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.legend h2 { font-size: 15px; font-weight: 600; }
+.legend p { margin: 0; color: var(--muted); font-size: 14px; max-width: 80ch; }
+
+footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
+
+.loading { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+[hidden] { display: none !important; }
+
+/* View switcher: patient chat / rules and tests */
+.views { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); }
+.views [role="tab"] { border: 1px solid transparent; border-bottom: none; background: none; color: var(--muted); font: 600 15px/1.2 var(--font-ui); padding: 11px 18px; border-radius: var(--radius) var(--radius) 0 0; position: relative; top: 1px; }
+.views [role="tab"]:hover { color: var(--ink); }
+.views [role="tab"][aria-selected="true"] { background: var(--surface); color: var(--ink); border-color: var(--line); }
+main { display: grid; gap: 20px; min-width: 0; }
+.view { display: grid; gap: 20px; min-width: 0; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; }
+.toolbar > .hint { margin: 0; max-width: 70ch; font-size: 14px; }
+
+/* Patient chat: a deep-sea panel; hexagon waves are drawn on a canvas behind the messages */
+.sim { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 20px; align-items: start; }
+.chat { background: var(--sea-deep); color: var(--sea-ink); border: 1px solid var(--sea); border-radius: 12px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: min(720px, calc(100vh - 140px)); min-height: 460px; min-width: 0; overflow: hidden; box-shadow: 0 12px 32px -18px rgba(4, 23, 22, 0.55); }
+.chat-head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--sea-line); background: rgba(4, 23, 22, 0.55); position: relative; z-index: 2; }
+.chat-head h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sea-muted); margin-right: auto; }
+.chat .btn { background: transparent; color: var(--sea-ink); border-color: var(--sea-line); }
+.chat .btn:hover { border-color: var(--sea-crest); }
+.chat-stage { position: relative; min-height: 0; background: radial-gradient(120% 90% at 20% 0%, var(--sea) 0%, #062a25 55%, var(--sea-deep) 100%); }
+.hexwaves { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.chat-log { position: absolute; inset: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; z-index: 1; scrollbar-color: var(--sea-wave) transparent; }
+.msg { max-width: 88%; padding: 10px 14px; border-radius: 14px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+.msg.bot { background: var(--bubble); color: var(--bubble-ink); align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 2px 10px rgba(4, 23, 22, 0.35); }
+.msg.me { background: var(--bubble-me); color: #FFFFFF; align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 2px 10px rgba(4, 23, 22, 0.35); }
+.msg .q-num { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.msg.me .q-num { color: rgba(255, 255, 255, 0.75); }
+/* The decision message: its border and halo take the urgency colour */
+.msg.decision { --glow: var(--glow-ask); border: 2px solid var(--glow); box-shadow: 0 0 0 4px color-mix(in srgb, var(--glow) 22%, transparent), 0 0 28px 4px color-mix(in srgb, var(--glow) 45%, transparent); animation: halo 2.8s ease-in-out infinite; }
+.msg.decision b { display: block; font-size: 16px; margin-bottom: 2px; }
+.msg.decision.none { --glow: var(--glow-none); }
+.msg.decision.urgent { --glow: var(--glow-urgent); }
+.msg.decision.emergency { --glow: var(--glow-emergency); }
+.msg.decision.ed { --glow: var(--glow-ed); }
+@keyframes halo {
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--glow) 30%, transparent), 0 0 40px 10px color-mix(in srgb, var(--glow) 55%, transparent); }
+}
+.replies { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--sea-line); min-height: 60px; align-content: center; background: rgba(4, 23, 22, 0.7); position: relative; z-index: 2; }
+.reply { border: 1px solid var(--sea-crest); color: var(--sea-ink); background: rgba(12, 67, 60, 0.6); border-radius: 999px; padding: 7px 14px; font-weight: 500; }
+.reply:hover { background: var(--sea-wave); }
+.reply.num { min-width: 44px; font-variant-numeric: tabular-nums; }
+.reply.primary { background: var(--sea-crest); border-color: var(--sea-crest); color: var(--sea-deep); font-weight: 600; }
+.reply.primary:hover { background: #5CCBB0; }
+.reply.muted { border-color: var(--sea-line); color: var(--sea-muted); background: transparent; }
+.chat button:focus-visible { outline-color: var(--sea-crest); }
+
+/* Hover hints */
+.tip { position: fixed; z-index: 50; max-width: min(320px, calc(100vw - 16px)); padding: 8px 11px; border-radius: 8px; background: var(--ink); color: var(--surface); font: 13px/1.45 var(--font-ui); box-shadow: 0 8px 24px -6px rgba(4, 23, 22, 0.45); pointer-events: none; animation: tip-in 0.12s ease-out; text-align: left; }
+.tip::after { content: ""; position: absolute; left: var(--arrow-x, 50%); top: 100%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--ink); }
+.tip.below::after { top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: var(--ink); }
+@keyframes tip-in { from { opacity: 0; transform: translateY(3px); } }
+
+.io { display: grid; gap: 14px; min-width: 0; }
+.io-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.io-card > h2 { display: flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.io-card > div { display: grid; gap: 12px; min-width: 0; }
+.step-num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 12px; letter-spacing: 0; }
+.ctx { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 13.5px; color: var(--muted); }
+.ctx b { color: var(--ink); font-weight: 600; }
+.io details summary { cursor: pointer; color: var(--accent); font-size: 13.5px; font-weight: 500; }
+.io details[open] summary { margin-bottom: 8px; }
+pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--font-code); background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
+.verdict { border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; border-left: 4px solid var(--muted); background: var(--surface-2); }
+/* the same green → yellow → red scale as the glow in the chat */
+.verdict.none { background: color-mix(in srgb, var(--glow-none) 18%, var(--surface)); border-left-color: var(--glow-none); }
+.verdict.urgent { background: color-mix(in srgb, var(--glow-urgent) 20%, var(--surface)); border-left-color: var(--glow-urgent); }
+.verdict.emergency { background: color-mix(in srgb, var(--glow-emergency) 20%, var(--surface)); border-left-color: var(--glow-emergency); }
+.verdict.ed { background: color-mix(in srgb, var(--glow-ed) 16%, var(--surface)); border-left-color: var(--glow-ed); }
+.verdict.ask { background: color-mix(in srgb, var(--glow-ask) 16%, var(--surface)); border-left-color: var(--glow-ask); }
+.verdict h3 { font-size: 18px; line-height: 1.3; }
+.verdict p { margin: 0; }
+.level { justify-self: start; font: 600 12px/1 var(--font-code); padding: 5px 8px; border-radius: 4px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.scores { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.scores b { font-variant-numeric: tabular-nums; }
+.notify { font-size: 13.5px; color: var(--muted); margin: 0; }
+.crisis { border: 1px solid var(--fail); border-radius: 6px; padding: 10px 12px; background: var(--surface); font-size: 14px; }
+.io table.trace td.val { white-space: normal; }
+.io table.trace td.fact { font-size: 13.5px; }
+.io table.trace td.code { font-family: var(--font-code); font-size: 12.5px; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) { .loading { animation: none; } .scen summary .chev { transition: none; } .msg.decision { animation: none; } .tip { animation: none; } }
+
+@media (min-width: 1021px) {
+  .work > .panel:first-child { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+}
+@media (max-width: 1020px) {
+  .work { grid-template-columns: minmax(0, 1fr); }
+  .sim { grid-template-columns: minmax(0, 1fr); }
+  .chat { height: 560px; }
+  .ex-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .page { padding-inline: 16px; }
+  .CodeMirror, textarea.fallback { height: 380px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div class="brand">
+      <span class="eyebrow">FHIR R4 · CQL · Clinical decision support</span>
+      <h1>Clinical rules in CQL</h1>
+      <p>Clinical rules on open standards: CQL is the rule language, FHIR is the format for medical data. In <b>Patient chat</b>, answer a few questions and see what data the engine received and what it decided. <b>Rules &amp; tests</b> shows the rules themselves and checks them against test patients automatically. Everything runs right here, in your browser.</p>
+    </div>
+  </header>
+
+  <nav class="views" role="tablist" aria-label="Demo mode">
+    <button type="button" role="tab" id="tab-chat" aria-controls="view-chat" aria-selected="true" data-tip="Answer as a patient and see what the rule engine receives and what it decides.">Patient chat</button>
+    <button type="button" role="tab" id="tab-rules" aria-controls="view-rules" aria-selected="false" tabindex="-1" data-tip="The rules themselves, the code vocabulary and the test patients. Edit them and re-run every check.">Rules &amp; tests</button>
+  </nav>
+
+  <main>
+  <section class="view" id="view-chat" role="tabpanel" aria-labelledby="tab-chat">
+    <div class="sim">
+      <section class="chat" aria-label="Patient chat">
+        <div class="chat-head">
+          <h2>Patient</h2>
+          <button class="btn small" id="chat-restart" type="button" data-tip="Clear the conversation and begin again. Your rule edits are kept.">Start over</button>
+        </div>
+        <div class="chat-stage" id="chat-stage">
+          <canvas class="hexwaves" id="chat-waves" aria-hidden="true"></canvas>
+          <div class="chat-log" id="chat-log" aria-live="polite"></div>
+        </div>
+        <div class="replies" id="chat-replies"></div>
+      </section>
+
+      <div class="io">
+        <section class="io-card" aria-labelledby="in-title">
+          <h2 id="in-title"><span class="step-num">1</span>Input: what the engine received</h2>
+          <div id="io-in"><p class="empty">The data the chat sends to the engine will appear here.</p></div>
+        </section>
+        <section class="io-card" aria-labelledby="out-title">
+          <h2 id="out-title"><span class="step-num">2</span>Output: what the engine decided</h2>
+          <div id="io-out"><p class="empty">The engine's decision will appear here.</p></div>
+        </section>
+      </div>
+    </div>
+    <p class="hint">A demonstration, not a medical tool: the thresholds and escalation levels are illustrative. Your answers never leave the browser — the engine runs locally.</p>
+  </section>
+
+  <section class="view" id="view-rules" role="tabpanel" aria-labelledby="tab-rules" hidden>
+  <div class="toolbar">
+    <p class="hint">The rules, the code vocabulary and the test patients. Edit any file and press “Compile &amp; run”: the engine re-checks every test patient. Rule changes apply to the patient chat right away.</p>
+    <div class="actions">
+      <button class="btn primary" id="run" type="button" data-tip="Compile the rules (CQL → ELM) and run every test patient through them. Shortcut: Ctrl + Enter.">Compile &amp; run</button>
+      <span class="hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span>
+      <button class="btn" id="reset" type="button" data-tip="Undo all your edits and restore the files from the repository. Click twice to confirm.">Reset changes</button>
+    </div>
+  </div>
+
+  <section class="status" aria-live="polite">
+    <span class="pill busy" id="pill"><span class="loading" aria-hidden="true"></span><span id="pill-text">Loading the compiler and the engine…</span></span>
+    <span class="facts" id="facts"></span>
+  </section>
+
+  <div class="work">
+    <section class="panel" aria-label="Rule files">
+      <div class="files" role="tablist" id="tabs"></div>
+      <div class="editor-wrap" id="editor-wrap"><textarea id="editor" aria-label="File editor"></textarea></div>
+      <div class="file-note"><span id="file-note"></span><span id="file-actions"></span></div>
+    </section>
+
+    <section class="panel" aria-label="Results">
+      <div class="panel-head"><h2>Engine output</h2><span class="hint" id="run-time"></span></div>
+      <div class="results">
+        <div class="block">
+          <h3>CQL → ELM compilation</h3>
+          <div class="libs" id="libs"><span class="empty">Not run yet.</span></div>
+          <ul class="errors" id="errors"></ul>
+        </div>
+        <div class="block">
+          <h3>Scenarios: test patients</h3>
+          <div id="scenarios"><span class="empty">Not run yet.</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="legend">
+    <h2>How to read the trace</h2>
+    <p>Each trace row is one step of the rule (<code>define</code>) and its value for this patient. <span class="mono">null</span> means “no value”: the rule never silently turns it into <span class="mono">false</span>. A ✓ marks a step the scenario checks.</p>
+  </section>
+
+  <section class="exercises" aria-labelledby="ex-title">
+    <h2 id="ex-title">Three 10-minute exercises</h2>
+    <div class="ex-grid">
+      <article class="ex">
+        <span class="num">EXERCISE 1</span>
+        <h3>Add a test patient without code</h3>
+        <ol>
+          <li>Press “+ Scenario” above the editor.</li>
+          <li>Look at the fields: the patient’s facts and the expected result <code>expect</code>.</li>
+          <li>Press “Compile &amp; run”.</li>
+        </ol>
+        <p class="expect">Expected: <code data-expect="ex1">13 / 13</code>. This is how a UAT scenario is added: just facts and expectations.</p>
+        <div class="row"><button class="btn small" type="button" data-ex="1" data-tip="Adds scenario 06, a patient with moderate pain, and runs every check.">Add and run</button></div>
+      </article>
+      <article class="ex">
+        <span class="num">EXERCISE 2</span>
+        <h3>Change a threshold and see what it affects</h3>
+        <ol>
+          <li>Open <code>SymptomTriage.cql</code>.</li>
+          <li>On line 34 change <code>"Pain Now" &gt;= 8</code> to <code>&gt;= 9</code>.</li>
+          <li>Run the scenarios.</li>
+        </ol>
+        <p class="expect">Expected: <code data-expect="ex2">10 / 12</code>. Scenarios 01 and 02 fail and show Provider notification instead of Provider evaluation required.</p>
+        <div class="row"><button class="btn small" type="button" data-ex="2" data-tip="Raises the pain threshold on line 34 of SymptomTriage.cql from 8 to 9 and runs every check.">Change and run</button></div>
+      </article>
+      <article class="ex">
+        <span class="num">EXERCISE 3</span>
+        <h3>Make a typo in a name</h3>
+        <ol>
+          <li>On the same line 34 rename <code>"Pain Now"</code> to <code>"Pain Score"</code>.</li>
+          <li>Run the scenarios.</li>
+          <li>Click the error: the editor jumps to that line.</li>
+        </ol>
+        <p class="expect">Expected: an error with the file, line and column. Click it and the editor jumps to the exact spot.</p>
+        <div class="row"><button class="btn small" type="button" data-ex="3" data-tip="Renames “Pain Now” on line 34 to a name that does not exist and runs the checks, to show a compile error.">Break and run</button></div>
+      </article>
+    </div>
+    <p class="hint">After the exercises press “Reset changes” to restore the files. Edits are stored only in your browser.</p>
+  </section>
+  </section>
+  </main>
+
+  <footer>
+    <span>The escalation levels in the rules are illustrative: this demonstrates an approach, not a clinical recommendation. The PHQ-9 and GAD-7 severity cut-offs are the published ones. All patients are synthetic.</span>
+    <span>Compiler: @cqframework/cql 5.4.0 (the cqframework reference translator). Engine: cql-execution 3.3.2 + cql-exec-fhir 2.2.0. FHIR R4.</span>
+    <span>Built by Andrii Yevenko · <a href="mailto:yevenko.a.p@gmail.com">yevenko.a.p@gmail.com</a></span>
+    <span>Code, rules and scenarios: <a href="https://github.com/ytsuhen/CQL-Demo-Yevenko">github.com/ytsuhen/CQL-Demo-Yevenko</a>. The page is rebuilt from the repository after every change.</span>
+  </footer>
+</div>
+
+<!-- web/build.mjs inserts the rules, the vocabulary and the scenarios from cql/, vocabulary.json and scenarios/ -->
+<script type="application/json" id="seed">/*SEED*/</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="engine.js"></script>
+<script>
+(() => {
+  "use strict";
+  const SEED = JSON.parse(document.getElementById("seed").textContent);
+  const MAIN = "SymptomTriage";
+  // Saved edits are tied to the file version, so a new build is never hidden behind old edits
+  const STORE_KEY = "cql-demo-files:" + SEED.version;
+
+  const NOTES = {
+    "SymptomTriage.cql": "Clinical module: short, because the routine work lives in the pattern library.",
+    "MoodScreening.cql": "Clinical module: depression (PHQ-9) and anxiety (GAD-7) screening. PHQ-9 item 9 is checked separately from the total score.",
+    "RulePatterns.cql": "Pattern library: the building blocks every rule reuses — time window, trusted sources, latest value, upward-only escalation.",
+    "FHIRHelpers.cql": "Standard HL7 helper library. No need to change it.",
+    "vocabulary.json": "ValueSets: set address → codes, e.g. the red-flag symptoms.",
+  };
+  const SCENARIO_06 = {
+    name: "Moderate pain 5, no previous level -> Urgent escalation, provider notification",
+    now: "2026-10-01T20:00:00Z",
+    lastRun: "2026-10-01T18:00:00Z",
+    currentLevel: null,
+    facts: [{ kind: "pain", value: 5, at: "2026-10-01T19:40:00Z", source: "RPM" }],
+    expect: { "Pain Now": 5, "Proposed Level": "Urgent escalation", "New Level": "Urgent escalation", "Disposition": "Provider notification" },
+  };
+
+  // ---------- file model ----------
+  const original = {};
+  for (const [name, text] of Object.entries(SEED.sources)) original[name + ".cql"] = text;
+  original["vocabulary.json"] = SEED.vocabulary;
+  for (const [file, text] of Object.entries(SEED.scenarios)) original["scenarios/" + file] = text;
+
+  // The expected exercise totals depend on how many scenarios the repository has
+  const scenarioCount = Object.keys(original).filter(f => f.startsWith("scenarios/")).length;
+  const hasScenario06 = Object.keys(original).some(f => f.startsWith("scenarios/06-"));
+  const ex1Total = hasScenario06 ? scenarioCount : scenarioCount + 1;
+  document.querySelector('[data-expect="ex1"]').textContent = `${ex1Total} / ${ex1Total}`;
+  document.querySelector('[data-expect="ex2"]').textContent = `${scenarioCount - 2} / ${scenarioCount}`;
+
+  let files = { ...original };
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    if (saved && typeof saved === "object") files = saved;
+  } catch (e) { /* storage unavailable: start from the originals */ }
+  const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(files)); } catch (e) { /* ignore */ } };
+
+  // Tab order: the main rule, other rules, the pattern library, FHIRHelpers
+  const LAST = ["RulePatterns.cql", "FHIRHelpers.cql"];
+  const order = () => {
+    const rules = Object.keys(files).filter(f => f.endsWith(".cql") && !LAST.includes(f) && f !== MAIN + ".cql").sort();
+    const cql = [MAIN + ".cql", ...rules, ...LAST].filter(f => f in files);
+    const scen = Object.keys(files).filter(f => f.startsWith("scenarios/")).sort();
+    return { rules: cql, data: ["vocabulary.json"], scen };
+  };
+  const label = f => f.replace("scenarios/", "");
+
+  // ---------- editor ----------
+  const CQL_KW = new Set("library version using include called codesystem code valueset parameter context define function from display where return sort by asc desc exists not and or xor implies case when then else end if is as in during contains between starts ends occurs before after same day days hour hours minute minutes week weeks month months year years second seconds with such that without let distinct all private public fluent".split(" "));
+  const CQL_BUILTIN = new Set("Interval List Tuple Last First Min Max Count Sum Avg Coalesce Now Today ToString ToDecimal ToInteger Patient Observation Condition String Integer Decimal Boolean DateTime Date Quantity Code Concept System FHIR".split(" "));
+  let cm = null;
+  const docs = {};
+  if (window.CodeMirror) {
+    CodeMirror.defineMode("cql", () => ({
+      startState: () => ({ inComment: false }),
+      token(stream, state) {
+        if (state.inComment) {
+          if (stream.match(/^.*?\*\//)) state.inComment = false; else stream.skipToEnd();
+          return "comment";
+        }
+        if (stream.eatSpace()) return null;
+        if (stream.match("//")) { stream.skipToEnd(); return "comment"; }
+        if (stream.match("/*")) { state.inComment = true; return "comment"; }
+        if (stream.match(/^'(?:[^'\\]|\\.)*'?/)) return "string";
+        if (stream.match(/^"(?:[^"\\]|\\.)*"?/)) return "def";
+        if (stream.match(/^\d+(?:\.\d+)?/)) return "number";
+        if (stream.match(/^[A-Za-z_][A-Za-z0-9_]*/)) {
+          const w = stream.current();
+          if (w === "null" || w === "true" || w === "false") return "atom";
+          if (CQL_KW.has(w)) return "keyword";
+          if (CQL_BUILTIN.has(w)) return "builtin";
+          return null;
+        }
+        stream.next();
+        return null;
+      },
+      lineComment: "//",
+    }));
+    CodeMirror.defineMode("jsonlite", () => ({
+      token(stream) {
+        if (stream.eatSpace()) return null;
+        if (stream.match(/^"(?:[^"\\]|\\.)*"(?=\s*:)/)) return "property";
+        if (stream.match(/^"(?:[^"\\]|\\.)*"?/)) return "string";
+        if (stream.match(/^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/)) return "number";
+        if (stream.match(/^(?:true|false|null)\b/)) return "atom";
+        stream.next();
+        return null;
+      },
+    }));
+    cm = CodeMirror.fromTextArea(document.getElementById("editor"), {
+      theme: "demo", lineNumbers: true, indentUnit: 2, tabSize: 2, lineWrapping: false,
+      extraKeys: { "Ctrl-Enter": () => run(), "Cmd-Enter": () => run() },
+    });
+  }
+  const fallback = cm ? null : document.getElementById("editor");
+  if (fallback) fallback.className = "fallback";
+
+  let current = "SymptomTriage.cql";
+  let shown = null; // the file whose text the editor currently holds
+  let marked = [];
+  const modeFor = f => (f.endsWith(".cql") ? "cql" : "jsonlite");
+
+  function getText(f) {
+    if (cm && docs[f]) return docs[f].getValue();
+    if (fallback && f === current) return fallback.value;
+    return files[f];
+  }
+  function syncCurrent() {
+    if (shown && shown === current && current in files) files[current] = getText(current);
+  }
+  function openFile(f) {
+    syncCurrent();
+    current = f;
+    if (cm) {
+      if (!docs[f]) docs[f] = CodeMirror.Doc(files[f], modeFor(f));
+      cm.swapDoc(docs[f]);
+      cm.setOption("readOnly", f === "FHIRHelpers.cql");
+    } else {
+      fallback.value = files[f];
+      fallback.readOnly = f === "FHIRHelpers.cql";
+    }
+    shown = f;
+    renderTabs();
+    renderNote();
+    applyMarks();
+  }
+  function replaceAll(f, text) {
+    files[f] = text;
+    if (cm && docs[f]) docs[f].setValue(text);
+    if (fallback && f === current) fallback.value = text;
+  }
+  function goTo(f, line, col) {
+    openFile(f);
+    if (cm) {
+      cm.focus();
+      cm.setCursor({ line: Math.max(0, line - 1), ch: Math.max(0, (col || 1) - 1) });
+      cm.scrollIntoView({ line: Math.max(0, line - 1), ch: 0 }, 120);
+    } else {
+      const lines = fallback.value.split("\n");
+      let pos = 0;
+      for (let i = 0; i < line - 1 && i < lines.length; i++) pos += lines[i].length + 1;
+      pos += Math.max(0, (col || 1) - 1);
+      fallback.focus();
+      fallback.setSelectionRange(pos, pos);
+    }
+  }
+  function applyMarks() {
+    if (!cm) return;
+    for (const m of marked) m.doc.removeLineClass(m.line, "background", m.cls);
+    marked = [];
+    const errs = (last && last.errors) || [];
+    for (const e of errs) {
+      if (!e.line || e.file !== current) continue;
+      const doc = cm.getDoc();
+      doc.addLineClass(e.line - 1, "background", "cm-err-line");
+      marked.push({ doc, line: e.line - 1, cls: "cm-err-line" });
+    }
+  }
+  if (cm) cm.on("change", () => { files[current] = cm.getValue(); save(); renderTabs(); });
+  if (fallback) fallback.addEventListener("input", () => { files[current] = fallback.value; save(); renderTabs(); });
+
+  // ---------- tabs ----------
+  const tabsEl = document.getElementById("tabs");
+  function tabButton(f) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(f === current));
+    b.tabIndex = f === current ? 0 : -1;
+    const status = last && last.byFile && last.byFile[f];
+    if (status) {
+      const m = document.createElement("span");
+      m.className = "mark " + status;
+      m.setAttribute("aria-hidden", "true");
+      b.append(m);
+    }
+    b.append(label(f));
+    b.dataset.tip = fileTip(f);
+    if (files[f] !== original[f]) {
+      const e = document.createElement("span");
+      e.className = "edited";
+      e.title = original[f] === undefined ? "New file" : "Changed";
+      e.textContent = "•";
+      b.append(e);
+    }
+    b.addEventListener("click", () => openFile(f));
+    return b;
+  }
+  function fileTip(f) {
+    if (NOTES[f]) return NOTES[f];
+    if (!f.startsWith("scenarios/")) return "";
+    try { return "Test patient: " + (JSON.parse(files[f]).name || label(f)); } catch (e) { return "Test patient (the file cannot be parsed right now)."; }
+  }
+  function group(title, list, extra) {
+    const g = document.createElement("div");
+    g.className = "file-group";
+    const l = document.createElement("span");
+    l.className = "label";
+    l.textContent = title;
+    g.append(l, ...list.map(tabButton));
+    if (extra) g.append(extra);
+    return g;
+  }
+  function renderTabs() {
+    const o = order();
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "add-scenario";
+    add.dataset.tip = "Add a new test patient: a scenario file with facts and the expected result.";
+    add.textContent = "+ Scenario";
+    add.addEventListener("click", () => addScenario());
+    tabsEl.replaceChildren(group("Rules", o.rules), group("Data", o.data), group("Scenarios", o.scen, add));
+  }
+  tabsEl.addEventListener("keydown", ev => {
+    if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
+    const all = [...tabsEl.querySelectorAll('[role="tab"]')];
+    const i = all.findIndex(t => t.getAttribute("aria-selected") === "true");
+    const next = all.at((i + (ev.key === "ArrowRight" ? 1 : -1)) % all.length);
+    if (next) { next.click(); tabsEl.querySelector('[aria-selected="true"]')?.focus(); }
+  });
+
+  function renderNote() {
+    const note = document.getElementById("file-note");
+    const actions = document.getElementById("file-actions");
+    actions.replaceChildren();
+    if (current.startsWith("scenarios/")) {
+      note.textContent = "Test patient: the rule (SymptomTriage if omitted), the facts (pain, phq9, gad7 with a value; phq9-item9 with an answer; symptom with a SNOMED CT code), the moment now, the previous run lastRun and the expectations expect.";
+      if (original[current] === undefined) {
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "btn small warn";
+        del.textContent = "Delete scenario";
+        del.dataset.tip = "Remove this scenario you added. Scenarios from the repository cannot be deleted here.";
+        del.addEventListener("click", () => {
+          delete files[current]; delete docs[current]; save();
+          openFile("scenarios/" + Object.keys(original).filter(f => f.startsWith("scenarios/")).map(label).sort()[0]);
+        });
+        actions.append(del);
+      }
+    } else {
+      note.textContent = NOTES[current] || "";
+    }
+  }
+
+  function addScenario(text) {
+    syncCurrent();
+    let n = 6, name;
+    do { name = `scenarios/${String(n).padStart(2, "0")}-${n === 6 ? "moderate-pain-urgent" : "new-scenario"}.json`; n++; } while (name in files);
+    files[name] = text || JSON.stringify(SCENARIO_06, null, 2) + "\n";
+    save();
+    openFile(name);
+    return name;
+  }
+
+  // ---------- run ----------
+  let last = null;
+  const runBtn = document.getElementById("run");
+  const pill = document.getElementById("pill");
+  const pillText = document.getElementById("pill-text");
+  const factsEl = document.getElementById("facts");
+
+  function setPill(kind, text) {
+    pill.className = "pill " + kind;
+    pill.replaceChildren();
+    const lead = document.createElement("span");
+    if (kind === "busy") lead.className = "loading"; else lead.className = "dot";
+    lead.setAttribute("aria-hidden", "true");
+    const t = document.createElement("span");
+    t.textContent = text;
+    pill.append(lead, t);
+  }
+
+  const passedWord = n => (n === 1 ? "scenario passed" : "scenarios passed");
+
+  // The latest compilation: the chat reuses it until the rule text changes
+  let compiledKey = null;
+  let compiledCache = null;
+  function currentSources() {
+    syncCurrent();
+    const sources = {};
+    for (const f of order().rules) sources[f.replace(/\.cql$/, "")] = files[f];
+    return sources;
+  }
+  function compileSources(sources, fresh) {
+    const key = JSON.stringify(sources);
+    if (fresh || key !== compiledKey) {
+      try {
+        compiledCache = DemoEngine.compile(sources);
+      } catch (e) {
+        compiledCache = { elm: {}, errors: [{ library: MAIN, line: null, col: null, message: "The compiler stopped: " + (e && e.message || e) }] };
+      }
+      compiledKey = key;
+    }
+    return compiledCache;
+  }
+
+  async function run() {
+    if (!window.DemoEngine) return;
+    syncCurrent();
+    save();
+    runBtn.disabled = true;
+    setPill("busy", "Compiling and running…");
+    await new Promise(r => setTimeout(r, 30));
+    const t0 = performance.now();
+    const sources = currentSources();
+    const result = { errors: [], byFile: {}, scenarios: [], libs: [] };
+    const compiled = compileSources(sources, true);
+    const t1 = performance.now();
+    for (const name of Object.keys(sources)) {
+      const errs = compiled.errors.filter(e => e.library === name);
+      result.libs.push({ name, ok: errs.length === 0 && !!compiled.elm[name] });
+      if (errs.length) result.byFile[name + ".cql"] = "err";
+    }
+    for (const e of compiled.errors) result.errors.push({ file: e.library + ".cql", line: e.line, col: e.col, message: e.message });
+
+    let vocabulary = {};
+    try { vocabulary = JSON.parse(files["vocabulary.json"]); }
+    catch (e) { result.errors.push({ file: "vocabulary.json", line: null, col: null, message: "Cannot parse JSON: " + e.message }); result.byFile["vocabulary.json"] = "err"; }
+
+    const canRun = compiled.errors.length === 0 && compiled.elm[MAIN];
+    for (const f of order().scen) {
+      let s;
+      try { s = JSON.parse(files[f]); }
+      catch (e) {
+        result.errors.push({ file: f, line: null, col: null, message: "Cannot parse JSON: " + e.message + ". Check the commas and quotes." });
+        result.byFile[f] = "err";
+        result.scenarios.push({ file: f, name: "Cannot read the file", state: "error" });
+        continue;
+      }
+      if (!canRun) { result.scenarios.push({ file: f, name: s.name || "", state: "skipped" }); continue; }
+      const rule = s.rule || MAIN;
+      if (!compiled.elm[rule]) {
+        result.scenarios.push({ file: f, name: s.name || "", state: "error", message: `Rule “${rule}” not found: it needs the file ${rule}.cql.` });
+        result.byFile[f] = "err";
+        continue;
+      }
+      try {
+        const r = await DemoEngine.runScenario(compiled.elm, rule, s, vocabulary);
+        result.scenarios.push({ file: f, name: s.name || "", rule, state: r.pass ? "pass" : "fail", ...r, expect: s.expect || {} });
+        result.byFile[f] = r.pass ? "pass" : "fail";
+      } catch (e) {
+        const msg = String(e && e.message || e).split("\n").find(l => l.includes("Error Message")) || String(e && e.message || e);
+        result.scenarios.push({ file: f, name: s.name || "", state: "error", message: msg.replace(/^\s*Error Message:\s*/, "") });
+        result.byFile[f] = "err";
+      }
+    }
+    result.compileMs = Math.round(t1 - t0);
+    result.runMs = Math.round(performance.now() - t1);
+    last = result;
+    runBtn.disabled = false;
+    render();
+  }
+
+  // ---------- render results ----------
+  const openState = new Set(["scenarios/01-escalate-to-emergency.json"]);
+
+  // 2026-10-01T13:55:00.000+00:00 -> 2026-10-01 13:55 UTC (easier to read in a trace)
+  const readable = t => t.replace(/(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):\d{2}(?:\.\d+)?(?:\+00:00|Z)/g, "$1 $2 UTC");
+  function valueCell(text) {
+    text = readable(text);
+    const td = document.createElement("td");
+    td.className = "val";
+    if (text === "null") { const s = document.createElement("span"); s.className = "null"; s.textContent = "null"; td.append(s); }
+    else td.textContent = text;
+    return td;
+  }
+
+  function render() {
+    const r = last;
+    const passed = r.scenarios.filter(s => s.state === "pass").length;
+    const total = r.scenarios.length;
+    if (r.errors.some(e => e.file.endsWith(".cql"))) setPill("bad", "Compilation error");
+    else if (passed === total && total > 0) setPill("ok", `${passed} / ${total} ${passedWord(total)}`);
+    else setPill("bad", `${passed} / ${total} ${passedWord(total)}`);
+
+    const okLibs = r.libs.filter(l => l.ok).length;
+    factsEl.replaceChildren();
+    const fact = (k, v) => { const s = document.createElement("span"); s.append(k + " "); const b = document.createElement("b"); b.textContent = v; s.append(b); factsEl.append(s); };
+    fact("Compiled:", `${okLibs} of ${r.libs.length} libraries`);
+    fact("Compile:", (r.compileMs / 1000).toFixed(1) + " s");
+    fact("Run:", (r.runMs / 1000).toFixed(1) + " s");
+    document.getElementById("run-time").textContent = "Each scenario sets its own “now”";
+
+    const libsEl = document.getElementById("libs");
+    libsEl.replaceChildren(...r.libs.map(l => {
+      const s = document.createElement("span");
+      s.className = "lib";
+      const t = document.createElement("span");
+      t.className = "tag " + (l.ok ? "pass" : "fail");
+      t.textContent = l.ok ? "OK" : "ERROR";
+      s.append(t, l.name + ".cql");
+      return s;
+    }));
+
+    const errEl = document.getElementById("errors");
+    errEl.replaceChildren(...r.errors.map(e => {
+      const li = document.createElement("li");
+      const b = document.createElement("button");
+      b.type = "button";
+      const w = document.createElement("span");
+      w.className = "where";
+      w.textContent = e.line ? `${e.file}:${e.line}:${e.col}` : e.file;
+      const m = document.createElement("span");
+      m.className = "msg";
+      m.textContent = e.message;
+      b.append(w, m);
+      b.dataset.tip = e.line ? "Jump to this line in the editor." : "Open this file in the editor.";
+      b.addEventListener("click", () => (e.line ? goTo(e.file, e.line, e.col) : openFile(e.file)));
+      li.append(b);
+      return li;
+    }));
+
+    const scEl = document.getElementById("scenarios");
+    scEl.replaceChildren(...r.scenarios.map(s => {
+      const d = document.createElement("details");
+      d.className = "scen";
+      d.open = openState.has(s.file) || s.state === "fail" || s.state === "error";
+      d.addEventListener("toggle", () => { if (d.open) openState.add(s.file); else openState.delete(s.file); });
+      const sum = document.createElement("summary");
+      sum.dataset.tip = "Show or hide this test patient's trace: every rule step, its value and what the scenario expects.";
+      const tag = document.createElement("span");
+      tag.className = "tag " + ({ pass: "pass", fail: "fail", error: "fail", skipped: "muted" }[s.state]);
+      tag.textContent = { pass: "PASS", fail: "FAIL", error: "ERROR", skipped: "NOT RUN" }[s.state];
+      const nm = document.createElement("span");
+      nm.className = "name";
+      const fl = document.createElement("span"); fl.className = "file"; fl.textContent = label(s.file);
+      const tl = document.createElement("span"); tl.className = "title"; tl.textContent = s.name;
+      nm.append(fl, tl);
+      const ch = document.createElement("span"); ch.className = "chev"; ch.textContent = "›"; ch.setAttribute("aria-hidden", "true");
+      sum.append(tag, nm, ch);
+      d.append(sum);
+      const body = document.createElement("div");
+      body.className = "body";
+      if (s.state === "skipped") {
+        const p = document.createElement("p"); p.className = "empty"; p.textContent = "Fix the compilation errors first.";
+        body.append(p);
+      } else if (s.state === "error") {
+        const p = document.createElement("p"); p.className = "empty"; p.textContent = s.message || "The scenario could not be read. The error is shown above.";
+        body.append(p);
+      } else {
+        if (s.failures.length) {
+          const ul = document.createElement("ul"); ul.className = "fails";
+          for (const f of s.failures) {
+            const li = document.createElement("li");
+            const c = document.createElement("code"); c.textContent = f.step;
+            li.append(c, `: expected ${f.expected}, got ${f.got}`);
+            ul.append(li);
+          }
+          body.append(ul);
+        }
+        const wrap = document.createElement("div"); wrap.className = "trace-wrap";
+        const t = document.createElement("table"); t.className = "trace";
+        const head = document.createElement("tr");
+        for (const txt of ["Step (define)", "Value"]) { const th = document.createElement("th"); th.textContent = txt; head.append(th); }
+        t.append(head);
+        const failed = new Map(s.failures.map(f => [f.step, f]));
+        for (const [step, val] of s.trace) {
+          const tr = document.createElement("tr");
+          if (step in s.expect) tr.className = failed.has(step) ? "bad" : "checked";
+          const a = document.createElement("td"); a.className = "step"; a.textContent = step;
+          const b = valueCell(val);
+          if (failed.has(step)) b.dataset.want = "expected: " + failed.get(step).expected;
+          tr.append(a, b);
+          t.append(tr);
+        }
+        wrap.append(t);
+        body.append(wrap);
+        const open = document.createElement("button");
+        open.type = "button"; open.className = "btn small"; open.textContent = "Open scenario";
+        open.dataset.tip = "Open this test patient's file in the editor.";
+        open.addEventListener("click", () => openFile(s.file));
+        const row = document.createElement("div"); row.append(open);
+        body.append(row);
+      }
+      d.append(body);
+      return d;
+    }));
+    renderTabs();
+    applyMarks();
+  }
+
+  // ---------- exercises ----------
+  function lineOf(text, needle) { return text.split("\n").findIndex(l => l.includes(needle)) + 1; }
+  document.querySelectorAll("[data-ex]").forEach(b => b.addEventListener("click", async () => {
+    syncCurrent();
+    const ex = b.dataset.ex;
+    if (ex === "1") {
+      const existing = Object.keys(files).find(f => f.startsWith("scenarios/06-"));
+      if (existing) openFile(existing); else addScenario();
+      await run();
+    } else {
+      const f = "SymptomTriage.cql";
+      let text = files[f];
+      if (ex === "2") text = text.replace('when "Pain Now" >= 8 then', 'when "Pain Now" >= 9 then');
+      if (ex === "3") text = text.replace(/when "Pain Now" >= (8|9) then/, 'when "Pain Score" >= $1 then');
+      replaceAll(f, text);
+      save();
+      await run();
+      const ln = lineOf(text, ex === "2" ? '>= 9 then' : '"Pain Score"');
+      if (ln > 0) goTo(f, ln, 1);
+    }
+  }));
+
+  // ---------- reset ----------
+  const resetBtn = document.getElementById("reset");
+  let armed = null;
+  resetBtn.addEventListener("click", async () => {
+    if (!armed) {
+      resetBtn.textContent = "Click again to reset";
+      resetBtn.classList.add("warn");
+      armed = setTimeout(() => { armed = null; resetBtn.textContent = "Reset changes"; resetBtn.classList.remove("warn"); }, 3500);
+      return;
+    }
+    clearTimeout(armed); armed = null;
+    resetBtn.textContent = "Reset changes"; resetBtn.classList.remove("warn");
+    files = { ...original };
+    for (const k of Object.keys(docs)) delete docs[k];
+    try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }
+    current = "SymptomTriage.cql";
+    shown = null;
+    openFile(current);
+    await run();
+  });
+
+  runBtn.addEventListener("click", () => run());
+  document.addEventListener("keydown", ev => { if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") { ev.preventDefault(); run(); } });
+
+  // ---------- views: patient chat / rules and tests ----------
+  const viewTabs = { chat: document.getElementById("tab-chat"), rules: document.getElementById("tab-rules") };
+  const viewPanels = { chat: document.getElementById("view-chat"), rules: document.getElementById("view-rules") };
+  function showView(name, remember) {
+    for (const key of Object.keys(viewPanels)) {
+      const on = key === name;
+      viewPanels[key].hidden = !on;
+      viewTabs[key].setAttribute("aria-selected", String(on));
+      viewTabs[key].tabIndex = on ? 0 : -1;
+    }
+    if (name === "rules" && cm) cm.refresh(); // the editor measures itself wrong while hidden
+    if (remember) history.replaceState(null, "", name === "rules" ? "#rules" : location.pathname + location.search);
+  }
+  for (const key of Object.keys(viewTabs)) viewTabs[key].addEventListener("click", () => showView(key, true));
+  document.querySelector(".views").addEventListener("keydown", ev => {
+    if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
+    const next = viewTabs.chat.getAttribute("aria-selected") === "true" ? "rules" : "chat";
+    showView(next, true);
+    viewTabs[next].focus();
+  });
+
+  // ---------- hexagon waves behind the chat ----------
+  // A field of small hexagons whose brightness follows two slow travelling waves.
+  // A decision message lights up the hexagons around it in its urgency colour.
+  const waves = (() => {
+    const stage = document.getElementById("chat-stage");
+    const canvas = document.getElementById("chat-waves");
+    const ctx = canvas.getContext && canvas.getContext("2d");
+    if (!ctx) return { light() {}, redraw() {} };
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const R = 7; // hexagon radius in CSS pixels
+    const STEP_X = Math.sqrt(3) * R;
+    const STEP_Y = 1.5 * R;
+    // Smooth 3D value noise: a continuous but irregular field, so the ripples never repeat
+    const PERM = new Uint8Array(256);
+    const VALUES = new Float32Array(256);
+    let seed = 20261001;
+    const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 256; i++) { PERM[i] = i; VALUES[i] = random() * 2 - 1; }
+    for (let i = 255; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [PERM[i], PERM[j]] = [PERM[j], PERM[i]]; }
+    const hash = (x, y, z) => VALUES[PERM[(PERM[(PERM[x & 255] + y) & 255] + z) & 255]];
+    const smooth = v => v * v * (3 - 2 * v);
+    const lerp = (a, b, k) => a + (b - a) * k;
+    function noise(x, y, z) { // -1..1
+      const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+      const u = smooth(x - xi), v = smooth(y - yi), w = smooth(z - zi);
+      const corner = (dx, dy, dz) => hash(xi + dx, yi + dy, zi + dz);
+      return lerp(
+        lerp(lerp(corner(0, 0, 0), corner(1, 0, 0), u), lerp(corner(0, 1, 0), corner(1, 1, 0), u), v),
+        lerp(lerp(corner(0, 0, 1), corner(1, 0, 1), u), lerp(corner(0, 1, 1), corner(1, 1, 1), u), v),
+        w,
+      );
+    }
+    const HEX = new Path2D();
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 3) * i - Math.PI / 6;
+      const x = Math.cos(a) * R * 0.82;
+      const y = Math.sin(a) * R * 0.82;
+      if (i) HEX.lineTo(x, y); else HEX.moveTo(x, y);
+    }
+    HEX.closePath();
+    const BASE = [7, 89, 74]; // --sea-wave
+    const CREST = [63, 181, 154]; // --sea-crest
+    const glows = [];
+    let cells = [];
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+
+    const rgbOf = name => {
+      const m = getComputedStyle(document.documentElement).getPropertyValue(name).trim().match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+      return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : CREST;
+    };
+
+    function resize() {
+      const box = stage.getBoundingClientRect();
+      width = box.width;
+      height = box.height;
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.max(1, Math.round(width * dpr));
+      canvas.height = Math.max(1, Math.round(height * dpr));
+      cells = [];
+      // a margin around the edges, so moving hexagons never leave gaps there
+      for (let y = -2 * R, row = 0; y < height + 2 * R; y += STEP_Y, row++) {
+        for (let x = -2 * R + (row % 2) * STEP_X / 2; x < width + 2 * R; x += STEP_X) cells.push(x, y);
+      }
+      draw(performance.now());
+    }
+
+    function draw(now) {
+      if (!width || !height) return;
+      const t = reduced.matches ? 0 : now / 1000;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const box = stage.getBoundingClientRect();
+      const lights = [];
+      for (let i = glows.length - 1; i >= 0; i--) {
+        const g = glows[i];
+        if (!g.el.isConnected) { glows.splice(i, 1); continue; }
+        const r = g.el.getBoundingClientRect();
+        lights.push({
+          x: r.left - box.left + r.width / 2,
+          y: r.top - box.top + r.height / 2,
+          reach: Math.max(r.width, r.height) * 0.7 + 60,
+          rgb: g.rgb,
+          power: reduced.matches ? 1 : Math.min(1, (now - g.born) / 1400),
+        });
+      }
+      for (let i = 0; i < cells.length; i += 2) {
+        const x0 = cells[i];
+        const y0 = cells[i + 1];
+        // A lake in a light breeze: irregular ripples that slowly appear and melt away
+        // (two octaves of noise), under even slower drifting gusts where they catch a bit more light.
+        const n1 = noise(x0 * 0.045, y0 * 0.045, t * 0.2);
+        const n2 = noise(x0 * 0.11 + 31.7, y0 * 0.11 - 12.3, t * 0.33);
+        const gust = 0.5 + 0.5 * noise(x0 * 0.007 + 5.1, y0 * 0.007 + 9.7, t * 0.04);
+        const ripple = 0.65 * n1 + 0.35 * n2; // roughly -1..1
+        const lift = 0.5 + 0.5 * ripple;
+        const light = lift * (0.4 + 0.6 * gust);
+        const glint = (lift < 0.7 ? 0 : ((lift - 0.7) / 0.3) ** 2) * gust; // rare, soft
+        const mix = Math.min(1, 0.1 + 0.42 * light + 0.4 * glint);
+        // Each hexagon barely sways with the water around it
+        const x = x0 + 1.4 * n2;
+        const y = y0 + 1.4 * n1;
+        const size = (0.8 + 0.16 * light) * dpr;
+        const tilt = 0.12 * n2;
+        let r = BASE[0] + (CREST[0] - BASE[0]) * mix;
+        let g = BASE[1] + (CREST[1] - BASE[1]) * mix;
+        let b = BASE[2] + (CREST[2] - BASE[2]) * mix;
+        let a = 0.1 + 0.2 * light + 0.22 * glint;
+        for (const L of lights) {
+          const d = Math.hypot(x - L.x, y - L.y);
+          if (d > L.reach * 1.7) continue;
+          // the halo breathes and ripples outwards from the message
+          const k = Math.exp(-((d / L.reach) ** 2) * 1.3) * L.power * (0.72 + 0.28 * Math.sin(t * 2.4 - d * 0.045));
+          r += (L.rgb[0] - r) * k;
+          g += (L.rgb[1] - g) * k;
+          b += (L.rgb[2] - b) * k;
+          a += (0.9 - a) * k;
+        }
+        const cos = Math.cos(tilt) * size;
+        const sin = Math.sin(tilt) * size;
+        ctx.setTransform(cos, sin, -sin, cos, x * dpr, y * dpr);
+        ctx.fillStyle = `rgba(${r | 0},${g | 0},${b | 0},${a.toFixed(3)})`;
+        ctx.fill(HEX);
+      }
+    }
+
+    let running = false;
+    let lastFrame = 0;
+    function frame(now) {
+      if (!running) return;
+      requestAnimationFrame(frame);
+      if (now - lastFrame < 33 || !stage.offsetParent) return; // ~30 fps is plenty; idle while the tab is hidden
+      lastFrame = now;
+      draw(now);
+    }
+    function start() {
+      running = !reduced.matches;
+      if (running) requestAnimationFrame(frame); else draw(performance.now());
+    }
+    if (reduced.addEventListener) reduced.addEventListener("change", () => { running = false; start(); });
+    if (window.ResizeObserver) new ResizeObserver(resize).observe(stage); else window.addEventListener("resize", resize);
+    resize();
+    start();
+    return {
+      light(el, level) {
+        glows.push({ el, rgb: rgbOf("--glow-" + level), born: performance.now() });
+        if (!running) draw(performance.now());
+      },
+      redraw() {
+        if (!running) draw(performance.now());
+      },
+    };
+  })();
+
+  // ---------- patient chat ----------
+  // The chat collects answers, turns them into the same facts a scenario file has,
+  // runs the current rules on them and shows what went in and what came out.
+  let firstRun = Promise.resolve();
+
+  const ANSWERS = ["Not at all", "Several days", "More than half the days", "Nearly every day"];
+  const PHQ9 = [
+    "Little interest or pleasure in doing things",
+    "Feeling down, depressed, or hopeless",
+    "Trouble falling or staying asleep, or sleeping too much",
+    "Feeling tired or having little energy",
+    "Poor appetite or overeating",
+    "Feeling bad about yourself — or that you are a failure or have let yourself or your family down",
+    "Trouble concentrating on things, such as reading the newspaper or watching television",
+    "Moving or speaking so slowly that other people could have noticed? Or the opposite — being so fidgety or restless that you have been moving around a lot more than usual",
+    "Thoughts that you would be better off dead or of hurting yourself in some way",
+  ];
+  const GAD7 = [
+    "Feeling nervous, anxious or on edge",
+    "Not being able to stop or control worrying",
+    "Worrying too much about different things",
+    "Trouble relaxing",
+    "Being so restless that it is hard to sit still",
+    "Becoming easily annoyed or irritable",
+    "Feeling afraid as if something awful might happen",
+  ];
+  // Ready-made answer sets: 0 = not at all … 3 = nearly every day
+  const PRESETS = [
+    { label: "all good", phq: [0, 1, 0, 1, 0, 0, 0, 0, 0], gad: [1, 0, 0, 1, 0, 0, 0] },
+    { label: "moderate depression", phq: [2, 2, 1, 2, 1, 2, 1, 1, 0], gad: [1, 1, 1, 1, 1, 1, 0] },
+    { label: "severe depression", phq: [3, 3, 2, 3, 2, 3, 2, 2, 0], gad: [2, 1, 1, 2, 1, 1, 1] },
+    { label: "marked anxiety", phq: [1, 1, 1, 1, 0, 0, 0, 0, 0], gad: [3, 2, 2, 2, 2, 2, 2] },
+    { label: "thoughts of self-harm", phq: [1, 1, 1, 1, 0, 1, 1, 0, 1], gad: [1, 0, 1, 1, 0, 0, 0] },
+  ];
+  const SYMPTOMS = { "161882006": { question: "a stiff neck (it is hard to touch your chest with your chin)", name: "stiff neck" } };
+  const SYSTEMS = { "http://loinc.org": "LOINC", "http://snomed.info/sct": "SNOMED CT" };
+  const DISPOSITIONS = {
+    "Emergency Department evaluation": { cls: "ed", title: "Seek emergency care now", text: "Pain together with a danger sign needs an assessment in the emergency department. If you feel very unwell, call your local emergency number (112 in Europe, 911 in the US)." },
+    "Urgent provider evaluation": { cls: "ed", title: "Please seek help urgently", text: "You said you have been having thoughts of death or of hurting yourself. Your doctor receives an urgent alert.", crisis: true },
+    "Provider evaluation required": { cls: "emergency", title: "A doctor needs to see you", text: "A doctor should see you soon; your answers have already been passed on." },
+    "Provider notification": { cls: "urgent", title: "We recommend talking to your doctor", text: "Your doctor will be notified about your answers and will contact you if needed." },
+    "Ask pain score": { cls: "ask", title: "We need your pain score", text: "Without a pain score the rule draws no conclusion and asks for one. A missing answer is never treated as “no pain”." },
+    "Ask PHQ-9 / GAD-7": { cls: "ask", title: "Please complete the questionnaire", text: "Without recent answers (from the last 2 weeks) the rule draws no conclusion." },
+    "Reassure": { cls: "none", title: "No warning signs", text: "No action needed. Let us know if anything changes." },
+  };
+  // The engine outputs shown up front and saved as expectations; the rest stays in the full trace
+  const KEY_OUTPUTS = {
+    SymptomTriage: ["Pain Now", "Red Flag Reported", "Proposed Level", "New Level", "Disposition"],
+    MoodScreening: ["PHQ-9 Score", "PHQ-9 Severity", "GAD-7 Score", "GAD-7 Severity", "Self-harm Thoughts", "Proposed Level", "New Level", "Disposition"],
+  };
+
+  const chatLog = document.getElementById("chat-log");
+  const chatReplies = document.getElementById("chat-replies");
+  const ioIn = document.getElementById("io-in");
+  const ioOut = document.getElementById("io-out");
+  let chatSession = 0;
+  chatLog.addEventListener("scroll", () => waves.redraw(), { passive: true });
+
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  };
+  const sum = list => list.reduce((a, b) => a + b, 0);
+  const timeOf = iso => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+  function say(content, who, label) {
+    const m = el("div", "msg " + (who || "bot"));
+    if (label) m.append(el("span", "q-num", label));
+    m.append(content);
+    chatLog.append(m);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    return m;
+  }
+  function choices(options) {
+    const my = chatSession;
+    // the reply bar may grow and shrink the log, so keep the newest message in view
+    requestAnimationFrame(() => { chatLog.scrollTop = chatLog.scrollHeight; });
+    return new Promise(resolve => {
+      chatReplies.replaceChildren(...options.map(o => {
+        const b = el("button", "reply" + (o.cls ? " " + o.cls : ""), o.label);
+        b.type = "button";
+        if (o.tip) b.dataset.tip = o.tip;
+        b.addEventListener("click", () => {
+          if (my !== chatSession) return;
+          chatReplies.replaceChildren();
+          if (!o.silent) say(o.reply || o.label, "me");
+          resolve(o.value);
+        });
+        return b;
+      }));
+    });
+  }
+  function ask(text, options, label) {
+    say(text, "bot", label);
+    return choices(options);
+  }
+  const ANSWER_OPTIONS = ANSWERS.map((label, value) => ({ label, value, tip: `Counts as ${value} point${value === 1 ? "" : "s"} towards the questionnaire total.` }));
+  // Pain bands of the 0–10 numeric rating scale; the rule's own thresholds live in SymptomTriage.cql
+  const painTip = n => `${n} of 10: ${n === 0 ? "no pain" : n <= 3 ? "mild pain" : n <= 6 ? "moderate pain" : "severe pain"}.`;
+  const presetTip = p => `Use ready-made answers: PHQ-9 total ${sum(p.phq)} of 27, GAD-7 total ${sum(p.gad)} of 21${p.phq[8] ? `, item 9 answered “${ANSWERS[p.phq[8]]}”` : ""}.`;
+  const TIP_RESTART = "Clear the conversation and begin again. Your rule edits are kept.";
+
+  function startChat() {
+    const my = ++chatSession;
+    chatLog.replaceChildren();
+    chatReplies.replaceChildren();
+    ioIn.replaceChildren(el("p", "empty", "The data the chat sends to the engine will appear here."));
+    ioOut.replaceChildren(el("p", "empty", "The engine's decision will appear here."));
+    (async () => {
+      const topic = await ask(
+        "Hi! This is a demo chat: you answer as a patient, and the Input and Output panels show what data the rule engine received and what it decided.\nWhat shall we check?",
+        [
+          { label: "Pain and symptoms", value: "pain", tip: "Runs the SymptomTriage rule: a pain score and danger signs." },
+          { label: "Mood and anxiety", value: "mood", tip: "Runs the MoodScreening rule: the PHQ-9 depression and GAD-7 anxiety questionnaires." },
+        ],
+      );
+      if (my !== chatSession) return;
+      if (topic === "pain") await painFlow(my);
+      else await moodFlow(my);
+    })();
+  }
+
+  function redFlagSymptoms() {
+    let vocabulary = {};
+    try { vocabulary = JSON.parse(files["vocabulary.json"]); } catch (e) { return []; }
+    const url = Object.keys(vocabulary).find(u => u.includes("red-flag"));
+    return url ? vocabulary[url] : [];
+  }
+
+  async function painFlow(my) {
+    const pain = await ask(
+      "Please rate your pain right now, from 0 (no pain) to 10 (the worst pain you can imagine).",
+      [...Array(11).keys()].map(n => ({ label: String(n), value: n, cls: "num", tip: painTip(n) }))
+        .concat([{ label: "Prefer not to answer", value: null, cls: "muted", tip: "Send no pain score. The rule treats a missing answer as unknown, not as “no pain”, and asks for it." }]),
+    );
+    if (my !== chatSession) return;
+    const at = new Date().toISOString();
+    const facts = [];
+    if (pain != null) facts.push({ kind: "pain", value: pain, at, source: "Patient" });
+    for (const s of redFlagSymptoms()) {
+      const known = SYMPTOMS[s.code];
+      const yes = await ask(`Do you have ${known ? known.question : "“" + (s.display || s.code) + "”"} right now?`, [
+        { label: "Yes", value: true, tip: "Report this symptom. It is on the red-flag list in vocabulary.json, so the rule goes straight to ED escalation." },
+        { label: "No", value: false, tip: "You do not have this symptom right now." },
+      ]);
+      if (my !== chatSession) return;
+      if (yes) facts.push({ kind: "symptom", system: s.system, code: s.code, at, source: "Patient" });
+    }
+    await finish(my, "SymptomTriage", facts);
+  }
+
+  async function moodFlow(my) {
+    const mode = await ask(
+      "These questions come from two standard questionnaires: PHQ-9 (depression) and GAD-7 (anxiety). You can answer them yourself or use a ready-made set of answers.",
+      [{ label: "Answer myself (16 questions)", value: "self", cls: "primary", tip: "Answer the 9 PHQ-9 and 7 GAD-7 questions one by one." }]
+        .concat(PRESETS.map((p, i) => ({ label: "Example: " + p.label, value: i, tip: presetTip(p) }))),
+    );
+    if (my !== chatSession) return;
+    let phq;
+    let gad;
+    if (mode === "self") {
+      say("Over the last 2 weeks, how often have you been bothered by any of the following problems?");
+      phq = [];
+      for (let i = 0; i < PHQ9.length; i++) {
+        phq.push(await ask(PHQ9[i], ANSWER_OPTIONS, `PHQ-9 · question ${i + 1} of ${PHQ9.length}`));
+        if (my !== chatSession) return;
+      }
+      gad = [];
+      for (let i = 0; i < GAD7.length; i++) {
+        gad.push(await ask(GAD7[i], ANSWER_OPTIONS, `GAD-7 · question ${i + 1} of ${GAD7.length}`));
+        if (my !== chatSession) return;
+      }
+    } else {
+      ({ phq, gad } = PRESETS[mode]);
+      say(`Example answers (0 = not at all … 3 = nearly every day):\nPHQ-9: ${phq.join(" · ")}\nGAD-7: ${gad.join(" · ")}`, "me");
+    }
+    const at = new Date().toISOString();
+    const facts = [
+      { kind: "phq9", value: sum(phq), at, source: "Patient" },
+      { kind: "phq9-item9", answer: ANSWERS[phq[8]], at, source: "Patient" },
+      { kind: "gad7", value: sum(gad), at, source: "Patient" },
+    ];
+    await finish(my, "MoodScreening", facts, { phq, gad });
+  }
+
+  // ---------- run the engine on the chat answers ----------
+  async function finish(my, rule, facts, answers) {
+    const scenario = {
+      name: "",
+      rule,
+      now: new Date().toISOString(),
+      lastRun: null,
+      currentLevel: null, // the chat plays a patient with no earlier alerts
+      facts,
+    };
+    renderInput(scenario, answers);
+    say("Thank you! Sending your answers to the rule engine…");
+    ioOut.replaceChildren(el("p", "empty", "The engine is working…"));
+    await firstRun;
+    await new Promise(r => setTimeout(r, 30)); // let the page paint before a possible recompile
+    if (my !== chatSession) return;
+
+    const compiled = compileSources(currentSources(), false);
+    let vocabulary = null;
+    try { vocabulary = JSON.parse(files["vocabulary.json"]); } catch (e) { /* reported below */ }
+    let problem = null;
+    if (compiled.errors.length) problem = "The rules currently have a compilation error. Fix it in “Rules & tests” or press “Reset changes” there.";
+    else if (!compiled.elm[rule]) problem = `Rule ${rule} not found: it needs the file ${rule}.cql.`;
+    else if (!vocabulary) problem = "vocabulary.json cannot be parsed. Fix it in “Rules & tests”.";
+    let result = null;
+    if (!problem) {
+      try {
+        result = await DemoEngine.runScenario(compiled.elm, rule, scenario, vocabulary);
+      } catch (e) {
+        problem = "The engine stopped: " + String((e && e.message) || e).split("\n")[0];
+      }
+    }
+    if (my !== chatSession) return;
+    if (problem) {
+      ioOut.replaceChildren(el("p", "empty", problem));
+      say(problem);
+      choices([{ label: "Start over", value: "restart", cls: "primary", silent: true, tip: TIP_RESTART }]).then(() => startChat());
+      return;
+    }
+
+    const out = Object.fromEntries(result.trace.map(([step, value]) => [step, value === "null" ? null : value]));
+    const verdict = interpret(rule, out);
+    renderOutput(rule, scenario, out, result.trace, verdict);
+    const body = document.createDocumentFragment();
+    body.append(el("b", null, verdict.title), verdict.text);
+    const decision = say(body);
+    decision.classList.add("decision", verdict.cls);
+    waves.light(decision, verdict.cls);
+
+    const next = await choices([
+      { label: "Start over", value: "restart", cls: "primary", silent: true, tip: TIP_RESTART },
+      { label: "Save as a test scenario", value: "save", silent: true, tip: "Turn this conversation into a test patient: the same answers, with the engine's current decision as the expected result. Every future run checks it." },
+    ]);
+    if (my !== chatSession) return;
+    if (next === "restart") { startChat(); return; }
+    const file = saveAsScenario(rule, scenario, out, verdict);
+    say(`Saved as test patient ${label(file)}. It is now checked together with all the others: Rules & tests → Scenarios.`);
+    const after = await choices([
+      { label: "Start over", value: "restart", cls: "primary", silent: true, tip: TIP_RESTART },
+      { label: "Open the scenario", value: "open", silent: true, tip: "Switch to Rules & tests and open the saved scenario file." },
+    ]);
+    if (my !== chatSession) return;
+    if (after === "open") { showView("rules", true); openFile(file); }
+    startChat();
+  }
+
+  function interpret(rule, out) {
+    const base = DISPOSITIONS[out.Disposition] || { cls: "ask", title: out.Disposition || "No decision", text: "This engine answer has no description on the page yet." };
+    const v = { ...base };
+    if (out.Disposition === "Reassure" && rule === "SymptomTriage") {
+      v.text = "Your pain is mild and there are no danger signs. Continue your treatment plan and let us know if anything changes.";
+    }
+    if (out.Disposition === "Reassure" && rule === "MoodScreening") {
+      const minimal = out["PHQ-9 Severity"] === "Minimal" && out["GAD-7 Severity"] === "Minimal";
+      v.title = minimal ? "No signs of depression or anxiety" : "Mild symptoms";
+      v.text = minimal
+        ? "No action needed. If things change, take the questionnaire again."
+        : "No action needed, but keep an eye on how you feel and repeat the questionnaire in 2 weeks.";
+    }
+    return v;
+  }
+
+  function notifyText(out, currentLevel) {
+    if (out["New Level"]) return `The care team gets a new alert: ${out["New Level"]}.`;
+    if (out["Proposed Level"] && out["Proposed Level"] !== "No escalation required") {
+      return `No new alert: the patient is already at ${currentLevel}, and the new answers do not call for a higher level.`;
+    }
+    return "No alert for the care team is needed.";
+  }
+
+  function table(head, rows, classes) {
+    const wrap = el("div", "trace-wrap");
+    const t = el("table", "trace");
+    const tr = el("tr");
+    for (const h of head) tr.append(el("th", null, h));
+    t.append(tr);
+    for (const row of rows) {
+      const r = el("tr");
+      row.forEach((cell, i) => r.append(cell instanceof Node ? cell : el("td", (classes && classes[i]) || (i === 0 ? "step" : "val"), cell)));
+      t.append(r);
+    }
+    wrap.append(t);
+    return wrap;
+  }
+  function details(summary, content, tip) {
+    const d = el("details");
+    const sm = el("summary", null, summary);
+    if (tip) sm.dataset.tip = tip;
+    d.append(sm, content);
+    return d;
+  }
+
+  function describeFact(fact, index) {
+    const obs = DemoEngine.toObservation(fact, index);
+    const coding = obs.code.coding[0];
+    const code = `${SYSTEMS[coding.system] || coding.system} ${coding.code}`;
+    if (fact.kind === "pain") return ["Pain on a 0–10 scale", String(fact.value), code];
+    if (fact.kind === "phq9") return ["Depression: PHQ-9 total score (0–27)", String(fact.value), code];
+    if (fact.kind === "gad7") return ["Anxiety: GAD-7 total score (0–21)", String(fact.value), code];
+    if (fact.kind === "phq9-item9") {
+      const answer = obs.valueCodeableConcept.coding[0];
+      return ["PHQ-9 item 9: thoughts of death or self-harm", `${fact.answer} (${answer.code})`, code];
+    }
+    if (fact.kind === "symptom") return ["Symptom: " + ((SYMPTOMS[fact.code] && SYMPTOMS[fact.code].name) || fact.code), "present", code];
+    return [fact.kind || "Fact", fact.value != null ? String(fact.value) : "present", code];
+  }
+
+  function renderInput(scenario, answers) {
+    const ctx = el("div", "ctx");
+    const fact = (k, v) => { const s = el("span", null, k + " "); s.append(el("b", null, v)); ctx.append(s); };
+    fact("Rule:", scenario.rule);
+    fact("Assessed at:", timeOf(scenario.now));
+    const parts = [ctx];
+    if (scenario.facts.length) {
+      parts.push(table(["Fact", "Value", "Code", "Source"], scenario.facts.map((f, i) => [...describeFact(f, i), "patient"]), ["fact", "fact", "code", "fact"]));
+    } else {
+      parts.push(el("p", "empty", "No facts: the patient reported nothing. The engine receives only the context."));
+    }
+    if (answers) {
+      parts.push(el("p", "notify", `The chat adds up the individual answers: PHQ-9 ${answers.phq.join(" · ")} = ${sum(answers.phq)}; GAD-7 ${answers.gad.join(" · ")} = ${sum(answers.gad)}. The engine receives the total scores and the item 9 answer — that is how the rule is built.`));
+    }
+    parts.push(details("How the engine sees it: FHIR (JSON)", el("pre", "json", JSON.stringify(DemoEngine.toBundle(scenario), null, 2)), "Show the exact FHIR resources (a Patient and one Observation per fact) passed to the engine."));
+    ioIn.replaceChildren(...parts);
+  }
+
+  function renderOutput(rule, scenario, out, trace, verdict) {
+    const card = el("div", "verdict " + verdict.cls);
+    if (out["Proposed Level"]) card.append(el("span", "level", out["Proposed Level"]));
+    card.append(el("h3", null, verdict.title), el("p", null, verdict.text));
+    if (verdict.crisis) {
+      card.append(el("p", "crisis", "If you are struggling right now, please reach out: call your local emergency number, or a crisis line — 988 in the US (call or text), Lifeline Ukraine 7333, or 112 in Europe."));
+    }
+    const parts = [card];
+    if (rule === "MoodScreening") {
+      const list = el("ul", "scores");
+      const line = (name, score, max, severity) => {
+        const li = el("li", null, name + ": ");
+        li.append(el("b", null, score == null ? "no data" : `${score} of ${max}`));
+        if (severity) li.append(" — " + severity.toLowerCase());
+        list.append(li);
+      };
+      line("Depression (PHQ-9)", out["PHQ-9 Score"], 27, out["PHQ-9 Severity"]);
+      line("Anxiety (GAD-7)", out["GAD-7 Score"], 21, out["GAD-7 Severity"]);
+      const li = el("li", null, "Thoughts of self-harm (item 9): ");
+      li.append(el("b", null, out["Self-harm Thoughts"] === "true" ? "yes" : out["Self-harm Thoughts"] === "false" ? "no" : "no data"));
+      list.append(li);
+      parts.push(list);
+    }
+    parts.push(el("p", "notify", notifyText(out, scenario.currentLevel)));
+    const keys = (KEY_OUTPUTS[rule] || trace.map(([step]) => step).slice(-3)).filter(k => k in out);
+    parts.push(el("p", "notify", "What the engine returned (values of the rule's steps):"));
+    parts.push(table(["Rule step", "Value"], keys.map(k => [k, valueCell(out[k] == null ? "null" : out[k])])));
+    parts.push(details(`All rule steps (${trace.length})`, table(["Step (define)", "Value"], trace.map(([step, value]) => [step, valueCell(value)])), "Show the value of every define in the rule, in order: how the engine got to its decision."));
+    ioOut.replaceChildren(...parts);
+  }
+
+  // Turn a chat run into a regression test: same facts, the engine's answer becomes the expectation
+  function saveAsScenario(rule, scenario, out, verdict) {
+    const typed = v => (v === "true" ? true : v === "false" ? false : v != null && /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v);
+    const expect = {};
+    for (const k of KEY_OUTPUTS[rule] || ["Disposition"]) if (k in out) expect[k] = typed(out[k]);
+    const s = { ...scenario, name: `Chat: ${verdict.title} (${out.Disposition ?? "no decision"})`, expect };
+    if (rule === MAIN) delete s.rule;
+    syncCurrent();
+    let n = 30;
+    let file;
+    do { file = `scenarios/${n}-chat-${rule === "MoodScreening" ? "mood" : "pain"}.json`; n++; } while (file in files);
+    files[file] = JSON.stringify(s, null, 2) + "\n";
+    save();
+    renderTabs();
+    return file;
+  }
+
+  document.getElementById("chat-restart").addEventListener("click", () => startChat());
+
+  // ---------- hover hints ----------
+  // Any element with data-tip shows a bubble above it on hover (or on keyboard focus).
+  const tip = el("div", "tip");
+  tip.id = "tip";
+  tip.setAttribute("role", "tooltip");
+  tip.hidden = true;
+  document.body.append(tip);
+  let tipFor = null;
+  let tipTimer = 0;
+  function showTip(target) {
+    if (!target.isConnected || !target.dataset.tip) return;
+    tipFor = target;
+    tip.textContent = target.dataset.tip;
+    tip.hidden = false;
+    tip.style.left = "0px";
+    tip.style.top = "0px";
+    target.setAttribute("aria-describedby", "tip");
+    const r = target.getBoundingClientRect();
+    const t = tip.getBoundingClientRect();
+    const below = r.top - t.height - 10 < 8;
+    const left = Math.max(8, Math.min(r.left + r.width / 2 - t.width / 2, document.documentElement.clientWidth - t.width - 8));
+    tip.style.left = left + "px";
+    tip.style.top = (below ? r.bottom + 10 : r.top - t.height - 10) + "px";
+    tip.style.setProperty("--arrow-x", Math.max(12, Math.min(t.width - 12, r.left + r.width / 2 - left)) + "px");
+    tip.classList.toggle("below", below);
+  }
+  function hideTip() {
+    clearTimeout(tipTimer);
+    if (tipFor) tipFor.removeAttribute("aria-describedby");
+    tipFor = null;
+    tip.hidden = true;
+  }
+  let hoverTarget = null;
+  document.addEventListener("pointermove", ev => {
+    if (ev.pointerType === "touch") return;
+    const target = ev.target.closest ? ev.target.closest("[data-tip]") : null;
+    if (target === hoverTarget) return;
+    hoverTarget = target;
+    hideTip();
+    if (target) tipTimer = setTimeout(() => showTip(target), 300);
+  });
+  document.documentElement.addEventListener("pointerleave", () => { hoverTarget = null; hideTip(); });
+  document.addEventListener("focusin", ev => {
+    const target = ev.target.closest && ev.target.closest("[data-tip]");
+    if (target && ev.target.matches(":focus-visible")) showTip(target); else hideTip();
+  });
+  document.addEventListener("focusout", hideTip);
+  document.addEventListener("pointerdown", hideTip, true);
+  // hide only when the scrolled area actually moves the hovered element (the chat log scrolling
+  // on its own must not hide a hint on the reply buttons below it)
+  document.addEventListener("scroll", ev => {
+    const scroller = ev.target === document ? document.documentElement : ev.target;
+    if (hoverTarget && scroller.contains && scroller.contains(hoverTarget)) { hoverTarget = null; hideTip(); }
+  }, true);
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape") hideTip(); });
+
+  // ---------- start ----------
+  openFile(current);
+  showView(location.hash === "#rules" ? "rules" : "chat", false);
+  startChat();
+  if (window.DemoEngine) {
+    firstRun = run();
+  } else {
+    setPill("bad", "The engine did not load. Reload the page.");
+    runBtn.disabled = true;
+  }
+})();
+</script>
+</body>
+</html>

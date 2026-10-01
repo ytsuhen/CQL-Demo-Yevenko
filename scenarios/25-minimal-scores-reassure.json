@@ -1,0 +1,12 @@
+{
+  "name": "Minimal PHQ-9 and GAD-7, item 9 \"Not at all\" -> no escalation required, reassure",
+  "rule": "MoodScreening",
+  "now": "2026-10-01T14:00:00Z",
+  "currentLevel": null,
+  "facts": [
+    { "kind": "phq9", "value": 3, "at": "2026-10-01T10:00:00Z", "source": "Patient" },
+    { "kind": "phq9-item9", "answer": "Not at all", "at": "2026-10-01T10:00:00Z", "source": "Patient" },
+    { "kind": "gad7", "value": 2, "at": "2026-10-01T10:05:00Z", "source": "Patient" }
+  ],
+  "expect": { "PHQ-9 Severity": "Minimal", "GAD-7 Severity": "Minimal", "Self-harm Thoughts": false, "Proposed Level": "No escalation required", "Disposition": "Reassure" }
+}

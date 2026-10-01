@@ -1,0 +1,12 @@
+{
+  "name": "PHQ-9 only 7, but item 9 \"Several days\" -> ED escalation, urgent provider evaluation",
+  "rule": "MoodScreening",
+  "now": "2026-10-01T14:00:00Z",
+  "currentLevel": null,
+  "facts": [
+    { "kind": "phq9", "value": 7, "at": "2026-10-01T10:00:00Z", "source": "Patient" },
+    { "kind": "phq9-item9", "answer": "Several days", "at": "2026-10-01T10:00:00Z", "source": "Patient" },
+    { "kind": "gad7", "value": 4, "at": "2026-10-01T10:05:00Z", "source": "Patient" }
+  ],
+  "expect": { "PHQ-9 Severity": "Mild", "Self-harm Thoughts": true, "Proposed Level": "ED escalation", "New Level": "ED escalation", "Disposition": "Urgent provider evaluation" }
+}

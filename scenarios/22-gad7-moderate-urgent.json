@@ -1,0 +1,12 @@
+{
+  "name": "GAD-7 13 (moderate), minimal PHQ-9 -> Urgent escalation, provider notification",
+  "rule": "MoodScreening",
+  "now": "2026-10-01T14:00:00Z",
+  "currentLevel": null,
+  "facts": [
+    { "kind": "phq9", "value": 3, "at": "2026-10-01T10:00:00Z", "source": "Patient" },
+    { "kind": "phq9-item9", "answer": "Not at all", "at": "2026-10-01T10:00:00Z", "source": "Patient" },
+    { "kind": "gad7", "value": 13, "at": "2026-10-01T10:05:00Z", "source": "Patient" }
+  ],
+  "expect": { "PHQ-9 Severity": "Minimal", "GAD-7 Severity": "Moderate", "Proposed Level": "Urgent escalation", "New Level": "Urgent escalation", "Disposition": "Provider notification" }
+}
