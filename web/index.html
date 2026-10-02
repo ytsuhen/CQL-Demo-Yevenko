@@ -574,7 +574,81 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
 .io table.trace td.fact { font-size: 13.5px; }
 .io table.trace td.code { font-family: var(--font-code); font-size: 12.5px; white-space: nowrap; }
 
-@media (prefers-reduced-motion: reduce) { .loading { animation: none; } .scen summary .chev { transition: none; } .msg.decision { animation: none; } .tip { animation: none; } }
+/* How it works: four steps, each opens its tab */
+.how { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.how button { width: 100%; height: 100%; text-align: left; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; align-content: start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; color: var(--ink); }
+.how button:hover { border-color: var(--accent); }
+.how .how-num { grid-row: span 2; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 13px; }
+.how b { font-size: 14.5px; }
+.how .txt { font-size: 13px; color: var(--muted); line-height: 1.4; }
+
+/* Chat head: the patient being played, and the progress of the questionnaire */
+.who { display: inline-flex; align-items: center; gap: 10px; background: none; border: 1px solid transparent; border-radius: 10px; padding: 4px 10px 4px 4px; color: var(--sea-ink); margin-right: auto; min-width: 0; max-width: 100%; text-align: left; }
+.who:hover { border-color: var(--sea-line); background: rgba(12, 67, 60, 0.5); }
+.avatar { width: 32px; height: 32px; border-radius: 50%; display: inline-grid; place-items: center; flex: none; background: var(--sea-wave); border: 1px solid var(--sea-crest); color: var(--sea-ink); font-weight: 600; }
+.who-text { display: grid; min-width: 0; line-height: 1.25; }
+.who-text b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who-text span { font-size: 12px; color: var(--sea-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-progress { font-size: 12.5px; color: var(--sea-muted); font-variant-numeric: tabular-nums; }
+.chat-bar { position: absolute; left: 0; bottom: -1px; height: 3px; width: 0; background: var(--sea-crest); transition: width 0.3s ease; }
+.sys-note { --glow: var(--glow-ask); align-self: center; display: inline-flex; gap: 8px; align-items: center; max-width: 92%; font-size: 12.5px; color: var(--sea-ink); background: rgba(4, 23, 22, 0.8); border: 1px solid var(--sea-line); border-radius: 999px; padding: 4px 12px; }
+.sys-note .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--glow); box-shadow: 0 0 8px var(--glow); }
+.sys-note.urgent { --glow: var(--glow-urgent); }
+.sys-note.emergency { --glow: var(--glow-emergency); }
+.sys-note.ed { --glow: var(--glow-ed); }
+.msg .why { display: block; margin-top: 6px; font-size: 13px; color: var(--muted); }
+
+/* Why this level: the flags that fired, with their evidence */
+.why-box { display: grid; gap: 8px; }
+.why-box h4 { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); }
+.flags { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.flag { --glow: var(--glow-ask); display: grid; gap: 2px; padding: 8px 10px 8px 12px; border-radius: 6px; border-left: 4px solid var(--glow); background: color-mix(in srgb, var(--glow) 12%, var(--surface)); font-size: 13.5px; }
+.flag span { font-size: 12px; color: var(--muted); }
+.flag.urgent { --glow: var(--glow-urgent); }
+.flag.emergency { --glow: var(--glow-emergency); }
+.flag.ed { --glow: var(--glow-ed); }
+.live { margin: 0; display: inline-flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--muted); }
+.live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--pass); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.35; } }
+.io td .null { font-family: var(--font-ui); }
+/* A long questionnaire scrolls inside the Input card, newest answer in view, so the Output stays close */
+.io .facts-scroll { max-height: 340px; overflow-y: auto; border-bottom: 1px solid var(--line); }
+.io .facts-scroll th { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.io tr.newest td { background: var(--accent-soft); }
+
+/* Patient background: a form and the same data as an editable FHIR Bundle */
+.bg { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 20px; align-items: start; }
+.form { display: grid; gap: 16px; border: 0; margin: 0; padding: 0; min-width: 0; }
+.form[disabled] { opacity: 0.55; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field > label, .field > .label { font-size: 13px; font-weight: 600; }
+.field .hint { margin: 0; }
+.input { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; min-width: 0; }
+.input:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+.row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.checks { display: grid; gap: 8px; }
+.check { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; align-items: start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); cursor: pointer; }
+.check:hover { border-color: var(--accent); }
+.check input { margin: 3px 0 0; width: 16px; height: 16px; accent-color: var(--accent); }
+.check b { font-weight: 600; font-size: 14px; }
+.check small { grid-column: 2; color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.check.off { opacity: 0.55; cursor: not-allowed; }
+.bg-status { margin: 0; font-size: 13.5px; padding: 8px 12px; border-radius: 6px; background: var(--surface-2); color: var(--muted); }
+.bg-status.ok { background: var(--pass-soft); color: var(--pass); }
+.bg-status.bad { background: var(--fail-soft); color: var(--fail); }
+.bg-status.dirty { background: var(--amber-soft); color: var(--amber); }
+.bg-status ul { margin: 4px 0 0; padding-left: 18px; }
+.io-card > .actions { display: flex; }
+.bg-editor .CodeMirror { height: 520px; border: 1px solid var(--line); border-radius: 6px; }
+.bg-editor textarea.fallback { height: 520px; border: 1px solid var(--line); border-radius: 6px; }
+
+/* Rules & tests: test patients in a grouped dropdown instead of dozens of tabs */
+.scen-picker { font: 12.5px var(--font-code); color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; margin-bottom: 4px; max-width: min(100%, 360px); }
+.scen-picker.active { color: var(--ink); border-color: var(--accent); background: var(--code-bg); }
+.scen-group { margin: 14px 0 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.scen-group:first-child { margin-top: 0; }
+
+@media (prefers-reduced-motion: reduce) { .loading { animation: none; } .scen summary .chev { transition: none; } .msg.decision { animation: none; } .tip { animation: none; } .live::before { animation: none; } .chat-bar { transition: none; } }
 
 @media (min-width: 1021px) {
   .work > .panel:first-child { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
@@ -582,12 +656,20 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
 @media (max-width: 1020px) {
   .work { grid-template-columns: minmax(0, 1fr); }
   .sim { grid-template-columns: minmax(0, 1fr); }
+  .bg { grid-template-columns: minmax(0, 1fr); }
+  .how { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chat { height: 560px; }
   .ex-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 560px) {
   .page { padding-inline: 16px; }
   .CodeMirror, textarea.fallback { height: 380px; }
+  .bg-editor .CodeMirror, .bg-editor textarea.fallback { height: 420px; }
+  .how { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .how button { padding: 10px 12px; align-items: center; }
+  .how .how-num { grid-row: auto; }
+  .how .txt { display: none; }
+  .row2 { grid-template-columns: minmax(0, 1fr); }
 }
 </style>
 </head>
@@ -597,12 +679,20 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     <div class="brand">
       <span class="eyebrow">FHIR R4 · CQL · Clinical decision support</span>
       <h1>Clinical rules in CQL</h1>
-      <p>Clinical rules on open standards: CQL is the rule language, FHIR is the format for medical data. In <b>Patient chat</b>, answer a few questions and see what data the engine received and what it decided. <b>Rules &amp; tests</b> shows the rules themselves and checks them against test patients automatically. Everything runs right here, in your browser.</p>
+      <p>Clinical rules on open standards: CQL is the rule language, FHIR is the format for medical data. In <b>Patient chat</b>, answer a few questions as a patient and watch what data the engine receives and what it decides. <b>Patient background</b> sets who you are playing, as FHIR you can edit by hand. <b>Rules &amp; tests</b> shows the rules themselves and checks them against test patients. Everything runs right here, in your browser.</p>
     </div>
   </header>
 
+  <ol class="how" aria-label="How the demo works">
+    <li><button type="button" data-go="background" data-tip="Open Patient background: the age and medical history the rules read."><span class="how-num">1</span><b>Background</b><span class="txt">Age and medical history, stored as FHIR resources you can edit.</span></button></li>
+    <li><button type="button" data-go="chat" data-tip="Open Patient chat and answer as the patient."><span class="how-num">2</span><b>Chat</b><span class="txt">Every answer becomes a FHIR Observation with a standard code.</span></button></li>
+    <li><button type="button" data-go="rules" data-tip="Open Rules &amp; tests to read the CQL rules."><span class="how-num">3</span><b>Rules</b><span class="txt">CQL rules run on that data in your browser and pick the escalation level.</span></button></li>
+    <li><button type="button" data-go="rules" data-tip="Open Rules &amp; tests: every test patient is re-checked after each change."><span class="how-num">4</span><b>Tests</b><span class="txt"><span data-count="scenarios">All</span> test patients re-check every rule branch after any change.</span></button></li>
+  </ol>
+
   <nav class="views" role="tablist" aria-label="Demo mode">
     <button type="button" role="tab" id="tab-chat" aria-controls="view-chat" aria-selected="true" data-tip="Answer as a patient and see what the rule engine receives and what it decides.">Patient chat</button>
+    <button type="button" role="tab" id="tab-background" aria-controls="view-background" aria-selected="false" tabindex="-1" data-tip="Who you are playing in the chat: age, sex and medical history, as a form and as editable FHIR JSON.">Patient background</button>
     <button type="button" role="tab" id="tab-rules" aria-controls="view-rules" aria-selected="false" tabindex="-1" data-tip="The rules themselves, the code vocabulary and the test patients. Edit them and re-run every check.">Rules &amp; tests</button>
   </nav>
 
@@ -611,8 +701,13 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     <div class="sim">
       <section class="chat" aria-label="Patient chat">
         <div class="chat-head">
-          <h2>Patient</h2>
-          <button class="btn small" id="chat-restart" type="button" data-tip="Clear the conversation and begin again. Your rule edits are kept.">Start over</button>
+          <button class="who" id="chat-who" type="button" data-tip="The synthetic patient you are playing. Click to change the age, sex or medical background.">
+            <span class="avatar" id="who-avatar" aria-hidden="true">A</span>
+            <span class="who-text"><b id="who-name">Patient</b><span id="who-meta"></span></span>
+          </button>
+          <span class="chat-progress" id="chat-progress" hidden data-tip="Questions asked so far out of the questionnaire's total."></span>
+          <button class="btn small" id="chat-restart" type="button" data-tip="Clear the conversation and begin again. Your rule edits and the patient background are kept.">Start over</button>
+          <span class="chat-bar" id="chat-bar" aria-hidden="true"></span>
         </div>
         <div class="chat-stage" id="chat-stage">
           <canvas class="hexwaves" id="chat-waves" aria-hidden="true"></canvas>
@@ -633,6 +728,59 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
       </div>
     </div>
     <p class="hint">A demonstration, not a medical tool: the thresholds and escalation levels are illustrative. Your answers never leave the browser — the engine runs locally.</p>
+  </section>
+
+  <section class="view" id="view-background" role="tabpanel" aria-labelledby="tab-background" hidden>
+    <p class="hint">Who you are playing in the chat. The form and the JSON are the same data: a FHIR Bundle with one Patient and the background facts as Observations. The chat sends it to the engine with every answer. HeadacheTriage reads the age (from <code>birthDate</code>) and the three background facts; the pain and mood rules ignore them.</p>
+    <div class="bg">
+      <section class="io-card" aria-labelledby="bg-form-title">
+        <h2 id="bg-form-title">Profile</h2>
+        <fieldset class="form" id="bg-form">
+          <div class="row2">
+            <div class="field">
+              <label for="bg-name">Name</label>
+              <input class="input" id="bg-name" type="text" autocomplete="off" spellcheck="false" data-tip="A synthetic name, shown in the chat. The rules do not use it.">
+            </div>
+            <div class="field">
+              <label for="bg-gender">Sex</label>
+              <select class="input" id="bg-gender" data-tip="FHIR Patient.gender. Pregnancy can be set only when it is not “male”.">
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="bg-age">Age</label>
+            <input class="input" id="bg-age" type="number" min="18" max="110" step="1" inputmode="numeric" data-tip="Adults only: 18 or older. The age is stored as a birth date, and the rule computes it with AgeInYears().">
+            <p class="hint" id="bg-age-note"></p>
+          </div>
+          <div class="field">
+            <span class="label">Medical background</span>
+            <div class="checks" id="bg-checks"></div>
+          </div>
+          <div class="field">
+            <label for="bg-source">Recorded by</label>
+            <select class="input" id="bg-source" data-tip="Goes to meta.tag of each background Observation. The rule accepts background facts from the clinical record (MANUAL) and from the patient.">
+              <option value="MANUAL">Clinician: the clinical record (MANUAL)</option>
+              <option value="Patient">The patient (self-reported)</option>
+            </select>
+          </div>
+        </fieldset>
+      </section>
+      <section class="io-card" aria-labelledby="bg-json-title">
+        <h2 id="bg-json-title">FHIR Bundle (JSON)</h2>
+        <p class="hint">Edit by hand and press “Apply JSON”. You can add any FHIR resource: it is passed to the engine as is. An Observation counts only with a source tag the rule trusts, as in the examples.</p>
+        <div class="bg-editor"><textarea id="bg-editor" aria-label="Patient background as a FHIR Bundle" spellcheck="false"></textarea></div>
+        <div id="bg-status" class="bg-status" role="status"></div>
+        <div class="actions">
+          <button class="btn primary" id="bg-apply" type="button" disabled data-tip="Check the JSON and use it in the chat. Shortcut: Ctrl + Enter.">Apply JSON</button>
+          <button class="btn" id="bg-discard" type="button" disabled data-tip="Throw away the JSON edits you have not applied.">Discard edits</button>
+          <button class="btn" id="bg-reset" type="button" data-tip="Go back to the default patient: Alex Morgan, 34, no background conditions. Click twice to confirm.">Reset patient</button>
+        </div>
+      </section>
+    </div>
   </section>
 
   <section class="view" id="view-rules" role="tabpanel" aria-labelledby="tab-rules" hidden>
@@ -721,7 +869,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   </main>
 
   <footer>
-    <span>The escalation levels in the rules are illustrative: this demonstrates an approach, not a clinical recommendation. The PHQ-9 and GAD-7 severity cut-offs are the published ones. All patients are synthetic.</span>
+    <span>The escalation levels in the rules are illustrative: this demonstrates an approach, not a clinical recommendation. The PHQ-9 and GAD-7 severity cut-offs are the published ones; the headache screen follows NICE CG150, SNNOOP10 and the Ottawa SAH Rule (<a href="https://github.com/ytsuhen/CQL-Demo-Yevenko/blob/main/docs/headache-triage-protocol.md">protocol</a>). All patients are synthetic.</span>
     <span>Compiler: @cqframework/cql 5.4.0 (the cqframework reference translator). Engine: cql-execution 3.3.2 + cql-exec-fhir 2.2.0. FHIR R4.</span>
     <span>Built by Andrii Yevenko · <a href="mailto:yevenko.a.p@gmail.com">yevenko.a.p@gmail.com</a></span>
     <span>Code, rules and scenarios: <a href="https://github.com/ytsuhen/CQL-Demo-Yevenko">github.com/ytsuhen/CQL-Demo-Yevenko</a>. The page is rebuilt from the repository after every change.</span>
@@ -743,6 +891,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   const NOTES = {
     "SymptomTriage.cql": "Clinical module: short, because the routine work lives in the pattern library.",
     "MoodScreening.cql": "Clinical module: depression (PHQ-9) and anxiety (GAD-7) screening. PHQ-9 item 9 is checked separately from the total score.",
+    "HeadacheTriage.cql": "Clinical module: adult headache triage (NICE CG150, SNNOOP10, Ottawa SAH Rule). Red flags → ED, orange flags → Emergency or Urgent; the pain score counts only when no flag fired.",
     "RulePatterns.cql": "Pattern library: the building blocks every rule reuses — time window, trusted sources, latest value, upward-only escalation.",
     "FHIRHelpers.cql": "Standard HL7 helper library. No need to change it.",
     "vocabulary.json": "ValueSets: set address → codes, e.g. the red-flag symptoms.",
@@ -768,6 +917,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   const ex1Total = hasScenario06 ? scenarioCount : scenarioCount + 1;
   document.querySelector('[data-expect="ex1"]').textContent = `${ex1Total} / ${ex1Total}`;
   document.querySelector('[data-expect="ex2"]').textContent = `${scenarioCount - 2} / ${scenarioCount}`;
+  document.querySelector('[data-count="scenarios"]').textContent = String(scenarioCount);
 
   let files = { ...original };
   try {
@@ -939,8 +1089,52 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     l.className = "label";
     l.textContent = title;
     g.append(l, ...list.map(tabButton));
-    if (extra) g.append(extra);
+    if (extra) g.append(...[].concat(extra));
     return g;
+  }
+  // Test patients grouped by the rule they test
+  const RULE_TITLES = { SymptomTriage: "Pain triage", HeadacheTriage: "Headache triage", MoodScreening: "Mood screening" };
+  const ruleCache = new Map();
+  function ruleOf(f) {
+    const text = files[f];
+    if (!ruleCache.has(text)) {
+      let rule;
+      try { rule = JSON.parse(text).rule || MAIN; } catch (e) { rule = "Cannot be read"; }
+      ruleCache.set(text, rule);
+    }
+    return ruleCache.get(text);
+  }
+  function byRule(list) {
+    const groups = new Map(Object.keys(RULE_TITLES).map(r => [r, []]));
+    for (const f of list) {
+      const r = ruleOf(f);
+      if (!groups.has(r)) groups.set(r, []);
+      groups.get(r).push(f);
+    }
+    return [...groups].filter(([, fs]) => fs.length);
+  }
+  function scenarioPicker(list) {
+    const sel = document.createElement("select");
+    const active = current.startsWith("scenarios/");
+    sel.className = "scen-picker" + (active ? " active" : "");
+    sel.setAttribute("aria-label", "Open a test patient");
+    sel.dataset.tip = `${list.length} test patients, grouped by rule. After a run, ✓ marks a pass and ✗ a failure.`;
+    const placeholder = new Option(`Open a test patient (${list.length})…`, "");
+    placeholder.disabled = true;
+    sel.append(placeholder);
+    for (const [rule, fs] of byRule(list)) {
+      const og = document.createElement("optgroup");
+      og.label = RULE_TITLES[rule] ? `${RULE_TITLES[rule]} (${rule})` : rule;
+      for (const f of fs) {
+        const status = last && last.byFile && last.byFile[f];
+        const mark = status === "pass" ? "✓ " : status ? "✗ " : "";
+        og.append(new Option(mark + label(f) + (files[f] !== original[f] ? " •" : ""), f));
+      }
+      sel.append(og);
+    }
+    sel.value = active ? current : "";
+    sel.addEventListener("change", () => { if (sel.value) openFile(sel.value); });
+    return sel;
   }
   function renderTabs() {
     const o = order();
@@ -950,10 +1144,11 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     add.dataset.tip = "Add a new test patient: a scenario file with facts and the expected result.";
     add.textContent = "+ Scenario";
     add.addEventListener("click", () => addScenario());
-    tabsEl.replaceChildren(group("Rules", o.rules), group("Data", o.data), group("Scenarios", o.scen, add));
+    tabsEl.replaceChildren(group("Rules", o.rules), group("Data", o.data), group("Scenarios", [], [scenarioPicker(o.scen), add]));
   }
   tabsEl.addEventListener("keydown", ev => {
     if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
+    if (ev.target.tagName === "SELECT") return;
     const all = [...tabsEl.querySelectorAll('[role="tab"]')];
     const i = all.findIndex(t => t.getAttribute("aria-selected") === "true");
     const next = all.at((i + (ev.key === "ArrowRight" ? 1 : -1)) % all.length);
@@ -965,7 +1160,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     const actions = document.getElementById("file-actions");
     actions.replaceChildren();
     if (current.startsWith("scenarios/")) {
-      note.textContent = "Test patient: the rule (SymptomTriage if omitted), the facts (pain, phq9, gad7 with a value; phq9-item9 with an answer; symptom with a SNOMED CT code), the moment now, the previous run lastRun and the expectations expect.";
+      note.textContent = "Test patient: the rule (SymptomTriage if omitted), the moment now, the previous run lastRun, the patient (birthDate) and any ready-made FHIR resources, the facts (pain, phq9, gad7 with a value; an answer such as Yes/No for headache, headache-screen, profile, phq9-item9 and symptom; a date for head-trauma) and the expectations expect.";
       if (original[current] === undefined) {
         const del = document.createElement("button");
         del.type = "button";
@@ -1035,7 +1230,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     return compiledCache;
   }
 
-  async function run() {
+  async function run(fresh = true) {
     if (!window.DemoEngine) return;
     syncCurrent();
     save();
@@ -1045,7 +1240,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     const t0 = performance.now();
     const sources = currentSources();
     const result = { errors: [], byFile: {}, scenarios: [], libs: [] };
-    const compiled = compileSources(sources, true);
+    const compiled = compileSources(sources, fresh);
     const t1 = performance.now();
     for (const name of Object.keys(sources)) {
       const errs = compiled.errors.filter(e => e.library === name);
@@ -1152,72 +1347,82 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     }));
 
     const scEl = document.getElementById("scenarios");
-    scEl.replaceChildren(...r.scenarios.map(s => {
-      const d = document.createElement("details");
-      d.className = "scen";
-      d.open = openState.has(s.file) || s.state === "fail" || s.state === "error";
-      d.addEventListener("toggle", () => { if (d.open) openState.add(s.file); else openState.delete(s.file); });
-      const sum = document.createElement("summary");
-      sum.dataset.tip = "Show or hide this test patient's trace: every rule step, its value and what the scenario expects.";
-      const tag = document.createElement("span");
-      tag.className = "tag " + ({ pass: "pass", fail: "fail", error: "fail", skipped: "muted" }[s.state]);
-      tag.textContent = { pass: "PASS", fail: "FAIL", error: "ERROR", skipped: "NOT RUN" }[s.state];
-      const nm = document.createElement("span");
-      nm.className = "name";
-      const fl = document.createElement("span"); fl.className = "file"; fl.textContent = label(s.file);
-      const tl = document.createElement("span"); tl.className = "title"; tl.textContent = s.name;
-      nm.append(fl, tl);
-      const ch = document.createElement("span"); ch.className = "chev"; ch.textContent = "›"; ch.setAttribute("aria-hidden", "true");
-      sum.append(tag, nm, ch);
-      d.append(sum);
-      const body = document.createElement("div");
-      body.className = "body";
-      if (s.state === "skipped") {
-        const p = document.createElement("p"); p.className = "empty"; p.textContent = "Fix the compilation errors first.";
-        body.append(p);
-      } else if (s.state === "error") {
-        const p = document.createElement("p"); p.className = "empty"; p.textContent = s.message || "The scenario could not be read. The error is shown above.";
-        body.append(p);
-      } else {
-        if (s.failures.length) {
-          const ul = document.createElement("ul"); ul.className = "fails";
-          for (const f of s.failures) {
-            const li = document.createElement("li");
-            const c = document.createElement("code"); c.textContent = f.step;
-            li.append(c, `: expected ${f.expected}, got ${f.got}`);
-            ul.append(li);
-          }
-          body.append(ul);
-        }
-        const wrap = document.createElement("div"); wrap.className = "trace-wrap";
-        const t = document.createElement("table"); t.className = "trace";
-        const head = document.createElement("tr");
-        for (const txt of ["Step (define)", "Value"]) { const th = document.createElement("th"); th.textContent = txt; head.append(th); }
-        t.append(head);
-        const failed = new Map(s.failures.map(f => [f.step, f]));
-        for (const [step, val] of s.trace) {
-          const tr = document.createElement("tr");
-          if (step in s.expect) tr.className = failed.has(step) ? "bad" : "checked";
-          const a = document.createElement("td"); a.className = "step"; a.textContent = step;
-          const b = valueCell(val);
-          if (failed.has(step)) b.dataset.want = "expected: " + failed.get(step).expected;
-          tr.append(a, b);
-          t.append(tr);
-        }
-        wrap.append(t);
-        body.append(wrap);
-        const open = document.createElement("button");
-        open.type = "button"; open.className = "btn small"; open.textContent = "Open scenario";
-        open.dataset.tip = "Open this test patient's file in the editor.";
-        open.addEventListener("click", () => openFile(s.file));
-        const row = document.createElement("div"); row.append(open);
-        body.append(row);
-      }
-      d.append(body);
-      return d;
+    const items = new Map(r.scenarios.map(s => [s.file, scenarioItem(s)]));
+    scEl.replaceChildren(...byRule(r.scenarios.map(s => s.file)).flatMap(([rule, fs]) => {
+      const ok = fs.filter(f => r.byFile[f] === "pass").length;
+      const h = document.createElement("h4");
+      h.className = "scen-group";
+      h.textContent = `${RULE_TITLES[rule] || rule} · ${ok} of ${fs.length} passed`;
+      return [h, ...fs.map(f => items.get(f))];
     }));
     renderTabs();
     applyMarks();
+  }
+
+  function scenarioItem(s) {
+    const d = document.createElement("details");
+    d.className = "scen";
+    d.open = openState.has(s.file) || s.state === "fail" || s.state === "error";
+    d.addEventListener("toggle", () => { if (d.open) openState.add(s.file); else openState.delete(s.file); });
+    const sum = document.createElement("summary");
+    sum.dataset.tip = "Show or hide this test patient's trace: every rule step, its value and what the scenario expects.";
+    const tag = document.createElement("span");
+    tag.className = "tag " + ({ pass: "pass", fail: "fail", error: "fail", skipped: "muted" }[s.state]);
+    tag.textContent = { pass: "PASS", fail: "FAIL", error: "ERROR", skipped: "NOT RUN" }[s.state];
+    const nm = document.createElement("span");
+    nm.className = "name";
+    const fl = document.createElement("span"); fl.className = "file"; fl.textContent = label(s.file);
+    const tl = document.createElement("span"); tl.className = "title"; tl.textContent = s.name;
+    nm.append(fl, tl);
+    const ch = document.createElement("span"); ch.className = "chev"; ch.textContent = "›"; ch.setAttribute("aria-hidden", "true");
+    sum.append(tag, nm, ch);
+    d.append(sum);
+    const body = document.createElement("div");
+    body.className = "body";
+    if (s.state === "skipped") {
+      const p = document.createElement("p"); p.className = "empty"; p.textContent = "Fix the compilation errors first.";
+      body.append(p);
+    } else if (s.state === "error") {
+      const p = document.createElement("p"); p.className = "empty"; p.textContent = s.message || "The scenario could not be read. The error is shown above.";
+      body.append(p);
+    } else {
+      if (s.failures.length) {
+        const ul = document.createElement("ul"); ul.className = "fails";
+        for (const f of s.failures) {
+          const li = document.createElement("li");
+          const c = document.createElement("code"); c.textContent = f.step;
+          const shown = v => (typeof v === "string" ? v : JSON.stringify(v));
+          li.append(c, `: expected ${shown(f.expected)}, got ${shown(f.got)}`);
+          ul.append(li);
+        }
+        body.append(ul);
+      }
+      const wrap = document.createElement("div"); wrap.className = "trace-wrap";
+      const t = document.createElement("table"); t.className = "trace";
+      const head = document.createElement("tr");
+      for (const txt of ["Step (define)", "Value"]) { const th = document.createElement("th"); th.textContent = txt; head.append(th); }
+      t.append(head);
+      const failed = new Map(s.failures.map(f => [f.step, f]));
+      for (const [step, val] of s.trace) {
+        const tr = document.createElement("tr");
+        if (step in s.expect) tr.className = failed.has(step) ? "bad" : "checked";
+        const a = document.createElement("td"); a.className = "step"; a.textContent = step;
+        const b = valueCell(val);
+        if (failed.has(step)) { const want = failed.get(step).expected; b.dataset.want = "expected: " + (typeof want === "string" ? want : JSON.stringify(want)); }
+        tr.append(a, b);
+        t.append(tr);
+      }
+      wrap.append(t);
+      body.append(wrap);
+      const open = document.createElement("button");
+      open.type = "button"; open.className = "btn small"; open.textContent = "Open scenario";
+      open.dataset.tip = "Open this test patient's file in the editor.";
+      open.addEventListener("click", () => openFile(s.file));
+      const row = document.createElement("div"); row.append(open);
+      body.append(row);
+    }
+    d.append(body);
+    return d;
   }
 
   // ---------- exercises ----------
@@ -1243,17 +1448,22 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   }));
 
   // ---------- reset ----------
-  const resetBtn = document.getElementById("reset");
-  let armed = null;
-  resetBtn.addEventListener("click", async () => {
-    if (!armed) {
-      resetBtn.textContent = "Click again to reset";
-      resetBtn.classList.add("warn");
-      armed = setTimeout(() => { armed = null; resetBtn.textContent = "Reset changes"; resetBtn.classList.remove("warn"); }, 3500);
-      return;
-    }
-    clearTimeout(armed); armed = null;
-    resetBtn.textContent = "Reset changes"; resetBtn.classList.remove("warn");
+  // A button that acts only on a second click within a few seconds
+  function armOnSecondClick(button, text, action) {
+    let armed = null;
+    button.addEventListener("click", async () => {
+      if (!armed) {
+        button.textContent = "Click again to reset";
+        button.classList.add("warn");
+        armed = setTimeout(() => { armed = null; button.textContent = text; button.classList.remove("warn"); }, 3500);
+        return;
+      }
+      clearTimeout(armed); armed = null;
+      button.textContent = text; button.classList.remove("warn");
+      await action();
+    });
+  }
+  armOnSecondClick(document.getElementById("reset"), "Reset changes", async () => {
     files = { ...original };
     for (const k of Object.keys(docs)) delete docs[k];
     try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }
@@ -1264,28 +1474,323 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   });
 
   runBtn.addEventListener("click", () => run());
-  document.addEventListener("keydown", ev => { if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") { ev.preventDefault(); run(); } });
+  // Ctrl + Enter: run the rules, or apply the background JSON on that tab (an editor that handled the key already says so)
+  document.addEventListener("keydown", ev => {
+    if (!(ev.ctrlKey || ev.metaKey) || ev.key !== "Enter" || ev.defaultPrevented) return;
+    if (!viewPanels.rules.hidden) { ev.preventDefault(); run(); }
+    else if (!viewPanels.background.hidden) { ev.preventDefault(); applyBackgroundJson(); }
+  });
 
-  // ---------- views: patient chat / rules and tests ----------
-  const viewTabs = { chat: document.getElementById("tab-chat"), rules: document.getElementById("tab-rules") };
-  const viewPanels = { chat: document.getElementById("view-chat"), rules: document.getElementById("view-rules") };
+  // ---------- views: patient chat / patient background / rules and tests ----------
+  const VIEWS = ["chat", "background", "rules"];
+  const viewTabs = Object.fromEntries(VIEWS.map(v => [v, document.getElementById("tab-" + v)]));
+  const viewPanels = Object.fromEntries(VIEWS.map(v => [v, document.getElementById("view-" + v)]));
   function showView(name, remember) {
-    for (const key of Object.keys(viewPanels)) {
+    for (const key of VIEWS) {
       const on = key === name;
       viewPanels[key].hidden = !on;
       viewTabs[key].setAttribute("aria-selected", String(on));
       viewTabs[key].tabIndex = on ? 0 : -1;
     }
-    if (name === "rules" && cm) cm.refresh(); // the editor measures itself wrong while hidden
-    if (remember) history.replaceState(null, "", name === "rules" ? "#rules" : location.pathname + location.search);
+    // the editors measure themselves wrong while hidden
+    if (name === "rules" && cm) cm.refresh();
+    if (name === "background" && bgCm) bgCm.refresh();
+    if (remember) history.replaceState(null, "", name === "chat" ? location.pathname + location.search : "#" + name);
   }
-  for (const key of Object.keys(viewTabs)) viewTabs[key].addEventListener("click", () => showView(key, true));
+  for (const key of VIEWS) viewTabs[key].addEventListener("click", () => showView(key, true));
   document.querySelector(".views").addEventListener("keydown", ev => {
     if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
-    const next = viewTabs.chat.getAttribute("aria-selected") === "true" ? "rules" : "chat";
+    const i = VIEWS.findIndex(v => viewTabs[v].getAttribute("aria-selected") === "true");
+    const next = VIEWS.at((i + (ev.key === "ArrowRight" ? 1 : -1)) % VIEWS.length);
     showView(next, true);
     viewTabs[next].focus();
   });
+  document.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => {
+    showView(b.dataset.go, true);
+    viewTabs[b.dataset.go].scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }));
+
+  // ---------- patient background ----------
+  // A FHIR Bundle: one Patient and the background facts as Observations. The form and the JSON editor
+  // change the same Bundle; the chat passes it to the engine with every run (scenario.patient / .resources).
+  const BG_KEY = "cql-demo-background:v1";
+  const LOINC_URL = "http://loinc.org";
+  const PROFILE_SYSTEM = "urn:example:cql-demo:profile";
+  const SOURCE_SYSTEM = "urn:example:cql-demo:source";
+  const PROFILE = [
+    { code: "pregnancy-or-postpartum", display: "Pregnancy or postpartum", short: "pregnant or postpartum", label: "Pregnant, or gave birth recently", note: "With a new or different headache: Emergency escalation (pre-eclampsia, venous sinus thrombosis).", notMale: true },
+    { code: "immunocompromised", display: "Immunocompromised", short: "immunocompromised", label: "Weakened immune system", note: "HIV or immunosuppressive medicines. With a new headache: Emergency escalation." },
+    { code: "cancer-history", display: "Cancer history", short: "cancer history", label: "History of cancer", note: "A cancer that can spread to the brain. With a new headache: Urgent escalation." },
+  ];
+  const GENDERS = ["female", "male", "other", "unknown"];
+  const MIN_AGE = 18;
+  const MAX_AGE = 110;
+
+  const isoDay = d => d.toISOString().slice(0, 10);
+  // The birth date for an age: half a year before the birthday, so the age holds for months
+  function birthDateFor(age) {
+    const now = new Date();
+    const d = new Date(Date.UTC(now.getUTCFullYear() - age, now.getUTCMonth(), now.getUTCDate()));
+    d.setUTCDate(d.getUTCDate() - 182);
+    return isoDay(d);
+  }
+  // The same as AgeInYears() in the rule: whole years, by the UTC date the engine uses
+  function ageFrom(birthDate) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthDate || "");
+    if (!m) return null;
+    const now = new Date();
+    const beforeBirthday = (now.getUTCMonth() + 1) * 100 + now.getUTCDate() < Number(m[2]) * 100 + Number(m[3]);
+    return now.getUTCFullYear() - Number(m[1]) - (beforeBirthday ? 1 : 0);
+  }
+  const nameParts = text => {
+    const words = text.trim().split(/\s+/).filter(Boolean);
+    return words.length > 1 ? { given: words.slice(0, -1), family: words.at(-1) } : { given: words };
+  };
+  const nameOf = p => {
+    const n = p && Array.isArray(p.name) && p.name[0];
+    return n ? n.text || [...(n.given || []), n.family].filter(Boolean).join(" ") : "";
+  };
+
+  const resourcesOf = b => b.entry.map(e => e && e.resource).filter(Boolean);
+  const patientOf = b => resourcesOf(b).find(r => r.resourceType === "Patient");
+  const profileObs = (b, code) => resourcesOf(b).find(r => r.resourceType === "Observation" && r.code && (r.code.coding || []).some(c => c.system === PROFILE_SYSTEM && c.code === code));
+  const sourceOf = r => (((r && r.meta && r.meta.tag) || []).find(t => t.system === SOURCE_SYSTEM) || {}).code;
+  const isYes = r => ((r && r.valueCodeableConcept && r.valueCodeableConcept.coding) || []).some(c => c.system === LOINC_URL && c.code === "LA33-6");
+  const yesNo = yes => ({ coding: [{ system: LOINC_URL, code: yes ? "LA33-6" : "LA32-8", display: yes ? "Yes" : "No" }] });
+
+  function profileObservation(item, yes, source) {
+    return {
+      resourceType: "Observation",
+      id: "bg-" + item.code,
+      meta: { tag: [{ system: SOURCE_SYSTEM, code: source }] },
+      status: "final",
+      code: { coding: [{ system: PROFILE_SYSTEM, code: item.code, display: item.display }] },
+      subject: { reference: "Patient/demo" },
+      effectiveDateTime: new Date().toISOString(),
+      valueCodeableConcept: yesNo(yes),
+    };
+  }
+  function defaultBackground() {
+    return {
+      resourceType: "Bundle",
+      type: "collection",
+      entry: [
+        { resource: { resourceType: "Patient", id: "demo", name: [{ text: "Alex Morgan", ...nameParts("Alex Morgan") }], gender: "female", birthDate: birthDateFor(34) } },
+        ...PROFILE.map(item => ({ resource: profileObservation(item, false, "MANUAL") })),
+      ],
+    };
+  }
+
+  // What the engine needs from the Bundle; a hand edit that breaks it is not applied
+  function checkBackground(b) {
+    if (!b || typeof b !== "object" || b.resourceType !== "Bundle" || !Array.isArray(b.entry)) {
+      return ['The top level must be a FHIR Bundle: { "resourceType": "Bundle", "entry": [ … ] }.'];
+    }
+    const errors = [];
+    b.entry.forEach((e, i) => {
+      if (!e || typeof e !== "object" || !e.resource || typeof e.resource.resourceType !== "string") errors.push(`entry[${i}] needs a "resource" with a "resourceType".`);
+    });
+    if (errors.length) return errors;
+    const patients = resourcesOf(b).filter(r => r.resourceType === "Patient");
+    if (patients.length !== 1) return [`The Bundle needs exactly one Patient; it has ${patients.length}.`];
+    const age = ageFrom(patients[0].birthDate);
+    if (age == null) errors.push('Patient.birthDate must be a full date such as "1992-04-02": the rules read the age from it.');
+    else if (age < MIN_AGE) errors.push(`The demo covers adults only: with this birthDate the patient is ${age}. Use a date at least ${MIN_AGE} years ago.`);
+    else if (age > MAX_AGE) errors.push(`Check Patient.birthDate: the patient would be ${age}.`);
+    return errors;
+  }
+
+  let background = (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(BG_KEY) || "null");
+      if (saved && checkBackground(saved).length === 0) return saved;
+    } catch (e) { /* storage unavailable: the default patient */ }
+    return defaultBackground();
+  })();
+  const saveBackground = () => { try { localStorage.setItem(BG_KEY, JSON.stringify(background)); } catch (e) { /* ignore */ } };
+  const backgroundAge = () => ageFrom(patientOf(background).birthDate);
+
+  // A copy for one engine run: the Patient goes to scenario.patient, everything else to scenario.resources
+  function backgroundForEngine() {
+    const all = resourcesOf(JSON.parse(JSON.stringify(background)));
+    const patient = all.find(r => r.resourceType === "Patient");
+    return { patient, resources: all.filter(r => r !== patient) };
+  }
+  function backgroundConditions() {
+    return PROFILE.filter(item => isYes(profileObs(background, item.code))).map(item => item.short);
+  }
+
+  const bgForm = document.getElementById("bg-form");
+  const bgName = document.getElementById("bg-name");
+  const bgGender = document.getElementById("bg-gender");
+  const bgAge = document.getElementById("bg-age");
+  const bgAgeNote = document.getElementById("bg-age-note");
+  const bgSource = document.getElementById("bg-source");
+  const bgStatus = document.getElementById("bg-status");
+  const bgApply = document.getElementById("bg-apply");
+  const bgDiscard = document.getElementById("bg-discard");
+  const bgReset = document.getElementById("bg-reset");
+  const bgChecks = {};
+  for (const item of PROFILE) {
+    const wrap = document.createElement("label");
+    wrap.className = "check";
+    wrap.dataset.tip = `Stored as an Observation with the local code ${item.code} and the answer Yes or No.`;
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    const b = document.createElement("b");
+    b.textContent = item.label;
+    const small = document.createElement("small");
+    small.textContent = item.note;
+    wrap.append(input, b, small);
+    document.getElementById("bg-checks").append(wrap);
+    bgChecks[item.code] = { wrap, input };
+    input.addEventListener("change", () => {
+      const obs = profileObs(background, item.code);
+      if (obs) {
+        obs.valueCodeableConcept = yesNo(input.checked);
+        obs.effectiveDateTime = new Date().toISOString();
+      } else {
+        background.entry.push({ resource: profileObservation(item, input.checked, bgSource.value) });
+      }
+      commitBackground();
+    });
+  }
+
+  function renderBackgroundForm() {
+    const p = patientOf(background);
+    bgName.value = nameOf(p);
+    bgGender.value = GENDERS.includes(p.gender) ? p.gender : "unknown";
+    bgAge.value = String(ageFrom(p.birthDate));
+    bgAgeNote.textContent = `Stored as birthDate ${p.birthDate}. Adults only: ${MIN_AGE} or older.`;
+    for (const item of PROFILE) {
+      const { wrap, input } = bgChecks[item.code];
+      input.checked = isYes(profileObs(background, item.code));
+      const off = Boolean(item.notMale) && p.gender === "male";
+      input.disabled = off;
+      wrap.classList.toggle("off", off);
+    }
+    const source = PROFILE.map(item => sourceOf(profileObs(background, item.code))).find(Boolean) || "MANUAL";
+    if (![...bgSource.options].some(o => o.value === source)) bgSource.append(new Option(`${source} (set in the JSON; the rule does not trust it)`, source));
+    bgSource.value = source;
+    renderWho();
+  }
+
+  function renderWho() {
+    const p = patientOf(background);
+    const name = nameOf(p) || "Patient";
+    const conditions = backgroundConditions();
+    document.getElementById("who-avatar").textContent = name.trim().charAt(0).toUpperCase() || "P";
+    document.getElementById("who-name").textContent = name;
+    document.getElementById("who-meta").textContent = [ageFrom(p.birthDate), p.gender, conditions.length ? conditions.join(", ") : "no background conditions"].filter(v => v != null && v !== "").join(" · ");
+  }
+
+  // ---- the JSON editor ----
+  const bgTextarea = document.getElementById("bg-editor");
+  let bgCm = null;
+  let bgText = ""; // the JSON of the Bundle in use
+  if (window.CodeMirror) {
+    bgCm = CodeMirror.fromTextArea(bgTextarea, {
+      mode: "jsonlite", theme: "demo", lineNumbers: true, indentUnit: 2, tabSize: 2,
+      extraKeys: { "Ctrl-Enter": () => applyBackgroundJson(), "Cmd-Enter": () => applyBackgroundJson() },
+    });
+    bgCm.on("change", (_, change) => { if (change.origin !== "setValue") onBackgroundEdit(); });
+  } else {
+    bgTextarea.className = "fallback";
+    bgTextarea.addEventListener("input", onBackgroundEdit);
+  }
+  const bgEditorText = () => (bgCm ? bgCm.getValue() : bgTextarea.value);
+  let bgErrorLine = null;
+  function markBackgroundLine(line) {
+    if (!bgCm) return;
+    if (bgErrorLine != null) bgCm.removeLineClass(bgErrorLine, "background", "cm-err-line");
+    bgErrorLine = line;
+    if (line != null) { bgCm.addLineClass(line, "background", "cm-err-line"); bgCm.scrollIntoView({ line, ch: 0 }, 80); }
+  }
+  function setBackgroundEditor(text) {
+    bgText = text;
+    markBackgroundLine(null);
+    if (bgCm) bgCm.setValue(text); else bgTextarea.value = text;
+    onBackgroundEdit();
+  }
+  function setBackgroundStatus(kind, text, list) {
+    bgStatus.className = "bg-status " + kind;
+    bgStatus.replaceChildren(text);
+    if (list && list.length) {
+      const ul = document.createElement("ul");
+      for (const item of list) { const li = document.createElement("li"); li.textContent = item; ul.append(li); }
+      bgStatus.append(ul);
+    }
+  }
+  function onBackgroundEdit() {
+    const dirty = bgEditorText() !== bgText;
+    bgApply.disabled = !dirty;
+    bgDiscard.disabled = !dirty;
+    bgForm.disabled = dirty;
+    if (dirty) setBackgroundStatus("dirty", "Edited, not applied yet. Press “Apply JSON” (Ctrl + Enter) to use it, or “Discard edits”. The form is locked until then.");
+    else setBackgroundStatus("ok", "In use: the chat sends this Bundle to the engine with its next answer.");
+  }
+  function commitBackground() {
+    saveBackground();
+    setBackgroundEditor(JSON.stringify(background, null, 2));
+    renderBackgroundForm();
+  }
+  function applyBackgroundJson() {
+    if (bgEditorText() === bgText) return;
+    let parsed;
+    try {
+      parsed = JSON.parse(bgEditorText());
+    } catch (e) {
+      const at = /position (\d+)/.exec(e.message);
+      const line = /line (\d+)/.exec(e.message);
+      const index = line ? Number(line[1]) - 1 : at ? bgEditorText().slice(0, Number(at[1])).split("\n").length - 1 : null;
+      setBackgroundStatus("bad", `Not applied: this is not valid JSON (${e.message}). Check the commas, quotes and brackets.`);
+      markBackgroundLine(index);
+      return;
+    }
+    const errors = checkBackground(parsed);
+    if (errors.length) { setBackgroundStatus("bad", "Not applied:", errors); markBackgroundLine(null); return; }
+    background = parsed;
+    commitBackground();
+    setBackgroundStatus("ok", "Applied. The chat sends this Bundle to the engine with its next answer.");
+  }
+  bgApply.addEventListener("click", applyBackgroundJson);
+  bgDiscard.addEventListener("click", () => setBackgroundEditor(bgText));
+  armOnSecondClick(bgReset, "Reset patient", () => { background = defaultBackground(); commitBackground(); });
+
+  bgName.addEventListener("change", () => {
+    const p = patientOf(background);
+    const text = bgName.value.trim();
+    if (text) p.name = [{ text, ...nameParts(text) }]; else delete p.name;
+    commitBackground();
+  });
+  bgGender.addEventListener("change", () => {
+    const p = patientOf(background);
+    p.gender = bgGender.value;
+    // pregnancy cannot be set for a male patient: clear it, as the form would
+    const pregnancy = PROFILE.find(item => item.notMale);
+    const obs = profileObs(background, pregnancy.code);
+    if (p.gender === "male" && isYes(obs)) { obs.valueCodeableConcept = yesNo(false); obs.effectiveDateTime = new Date().toISOString(); }
+    commitBackground();
+  });
+  bgAge.addEventListener("change", () => {
+    const p = patientOf(background);
+    const typed = Math.round(Number(bgAge.value));
+    if (!Number.isFinite(typed) || bgAge.value === "") { renderBackgroundForm(); return; }
+    const age = Math.min(MAX_AGE, Math.max(MIN_AGE, typed));
+    if (age !== ageFrom(p.birthDate)) p.birthDate = birthDateFor(age);
+    commitBackground();
+    if (typed < MIN_AGE) bgAgeNote.textContent = `The demo covers adults only, so the youngest age is ${MIN_AGE}. Stored as birthDate ${p.birthDate}.`;
+  });
+  bgSource.addEventListener("change", () => {
+    for (const item of PROFILE) {
+      const obs = profileObs(background, item.code);
+      if (!obs) continue;
+      obs.meta = obs.meta || {};
+      obs.meta.tag = [...(obs.meta.tag || []).filter(t => t.system !== SOURCE_SYSTEM), { system: SOURCE_SYSTEM, code: bgSource.value }];
+    }
+    commitBackground();
+  });
+  document.getElementById("chat-who").addEventListener("click", () => showView("background", true));
 
   // ---------- hexagon waves behind the chat ----------
   // A field of small hexagons whose brightness follows two slow travelling waves.
@@ -1445,7 +1950,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   // ---------- patient chat ----------
   // The chat collects answers, turns them into the same facts a scenario file has,
   // runs the current rules on them and shows what went in and what came out.
-  let firstRun = Promise.resolve();
+  // The headache screen re-runs the engine after every answer, so its Output panel is live.
 
   const ANSWERS = ["Not at all", "Several days", "More than half the days", "Nearly every day"];
   const PHQ9 = [
@@ -1477,12 +1982,15 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     { label: "thoughts of self-harm", phq: [1, 1, 1, 1, 0, 1, 1, 0, 1], gad: [1, 0, 1, 1, 0, 0, 0] },
   ];
   const SYMPTOMS = { "161882006": { question: "a stiff neck (it is hard to touch your chest with your chin)", name: "stiff neck" } };
-  const SYSTEMS = { "http://loinc.org": "LOINC", "http://snomed.info/sct": "SNOMED CT" };
+  const SYSTEMS = { "http://loinc.org": "LOINC", "http://snomed.info/sct": "SNOMED CT", "urn:example:cql-demo:headache": "local", "urn:example:cql-demo:profile": "local" };
+  const SOURCE_NAMES = { Patient: "patient", MANUAL: "clinician", RPM: "device" };
   const DISPOSITIONS = {
+    "Leave area and seek emergency care": { cls: "ed", title: "Get into fresh air and call for help", text: "Your symptoms could be caused by carbon monoxide. Get everyone, including pets, out into fresh air now. Call emergency services from outside. Do not go back in until the building has been checked." },
     "Emergency Department evaluation": { cls: "ed", title: "Seek emergency care now", text: "Pain together with a danger sign needs an assessment in the emergency department. If you feel very unwell, call your local emergency number (112 in Europe, 911 in the US)." },
     "Urgent provider evaluation": { cls: "ed", title: "Please seek help urgently", text: "You said you have been having thoughts of death or of hurting yourself. Your doctor receives an urgent alert.", crisis: true },
     "Provider evaluation required": { cls: "emergency", title: "A doctor needs to see you", text: "A doctor should see you soon; your answers have already been passed on." },
     "Provider notification": { cls: "urgent", title: "We recommend talking to your doctor", text: "Your doctor will be notified about your answers and will contact you if needed." },
+    "Ask headache screen": { cls: "ask", title: "We need a few more answers", text: "We need a few more answers before we can advise you. Please answer the remaining questions. If your headache suddenly becomes severe, or you notice weakness, numbness, trouble speaking, confusion or a seizure, call emergency services now." },
     "Ask pain score": { cls: "ask", title: "We need your pain score", text: "Without a pain score the rule draws no conclusion and asks for one. A missing answer is never treated as “no pain”." },
     "Ask PHQ-9 / GAD-7": { cls: "ask", title: "Please complete the questionnaire", text: "Without recent answers (from the last 2 weeks) the rule draws no conclusion." },
     "Reassure": { cls: "none", title: "No warning signs", text: "No action needed. Let us know if anything changes." },
@@ -1491,10 +1999,76 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   const KEY_OUTPUTS = {
     SymptomTriage: ["Pain Now", "Red Flag Reported", "Proposed Level", "New Level", "Disposition"],
     MoodScreening: ["PHQ-9 Score", "PHQ-9 Severity", "GAD-7 Score", "GAD-7 Severity", "Self-harm Thoughts", "Proposed Level", "New Level", "Disposition"],
+    HeadacheTriage: ["Age", "Pain Now", "Fired Flags", "Ask Headache Screen", "Proposed Level", "New Level", "Disposition"],
   };
+  const LEVEL_CLS = { "ED escalation": "ed", "Emergency escalation": "emergency", "Urgent escalation": "urgent", "No escalation required": "none" };
+  // Dispositions after which the chat stops asking: one answer was enough
+  const STOP = new Set(["Leave area and seek emergency care", "Emergency Department evaluation"]);
+
+  // The headache screen in the protocol's order: ED-level questions first, then the pain score, then the rest
+  const NEW_PAIN_TIP = "A new or different headache: an orange flag (Urgent escalation). It also turns on the flags that need a new headache.";
+  const HQ = [
+    { code: "co-exposure", short: "Others unwell nearby, or a fuel-burning appliance", text: "Does anyone around you have similar symptoms? Is a generator, gas heater or stove running indoors where you are?", yes: "Possible carbon monoxide: ED escalation, and the first advice is to leave the area." },
+    { code: "onset-peak", short: "Time from onset to the worst pain", text: "How quickly did the headache reach its worst?", options: [
+      { label: "Within 5 minutes", value: "within-5-min", tip: "A thunderclap onset: a red flag, ED escalation." },
+      { label: "In 5 to 60 minutes", value: "5-to-60-min", tip: "With a new headache and pain of 7 or more, the Ottawa SAH Rule is checked." },
+      { label: "Over more than an hour", value: "over-60-min", tip: "A gradual onset: no flag by itself." },
+    ] },
+    { code: "onset-exertion", short: "Started during physical effort", text: "Did it start during physical effort, such as exercise, lifting or straining?", yes: "One of the Ottawa SAH Rule criteria: it counts with a new, severe headache that peaked within an hour." },
+    { code: "similarity", short: "Compared with usual headaches", text: "Is this headache like the headaches you usually get?", options: [
+      { label: "Like my usual ones", value: "usual", tip: "A familiar headache: no flag by itself." },
+      { label: "Different from usual", value: "different", tip: NEW_PAIN_TIP },
+      { label: "My first headache like this", value: "first-ever", tip: NEW_PAIN_TIP },
+    ] },
+    { code: "neuro-deficit", short: "New neurological symptoms", text: "Have you noticed any of these: weakness or numbness on one side, trouble speaking, a drooping face, double vision or loss of vision, or a seizure?", yes: "A red flag: ED escalation." },
+    { code: "altered-consciousness", short: "Confusion, drowsiness or fainting", text: "Are you confused or unusually drowsy, have you fainted, or have people close to you noticed a change in your behaviour?", yes: "A red flag: ED escalation." },
+    { code: "fever", short: "Fever", text: "Do you have a fever?", yes: "With neck pain or stiffness: ED escalation. With a headache that is getting worse: Emergency escalation." },
+    { code: "neck-stiffness", short: "Neck pain or stiffness", text: "Is your neck painful or stiff, so that it is hard to bend your head forward?", yes: "With fever: a red flag (possible meningitis). It is also an Ottawa SAH Rule criterion." },
+    { code: "eye-pain-vision", short: "Eye pain or vision changes", text: "Is an eye painful or red? Has your vision become blurred, or do you see rainbow-coloured rings around lights?", yes: "A red flag (possible acute glaucoma): ED escalation." },
+    { kind: "pain", short: "Pain now, 0–10", text: "How bad is the headache right now, from 0 (no pain) to 10 (the worst pain you can imagine)?" },
+    { code: "worsening", short: "Getting worse over the last hours", text: "Is the headache getting worse over the last few hours?", yes: "With fever: Emergency escalation." },
+    { code: "head-trauma", short: "Recent head injury", text: "Have you hit your head recently?", options: [
+      { label: "No", value: "No", tip: "Recorded as “No”: a real answer." },
+      { label: "Yes, in the last 4 weeks", value: { daysAgo: 14 }, tip: "Recorded as the date of the injury, about 2 weeks ago: within 3 months, so Emergency escalation." },
+      { label: "Yes, 1–3 months ago", value: { daysAgo: 60 }, tip: "Recorded as a date about 2 months ago: within the 90-day window, so Emergency escalation." },
+      { label: "Yes, more than 3 months ago", value: { daysAgo: 120 }, tip: "Recorded as a date about 4 months ago: outside the 90-day window, so no flag." },
+    ] },
+    { code: "positional", short: "Changes when lying down or standing up", text: "Does the headache change when you lie down or stand up?", yes: "An orange flag: Urgent escalation." },
+    { code: "valsalva-exertion", short: "Triggered by coughing, straining or effort", text: "Does the headache start or get worse when you cough, sneeze, strain or exert yourself?", yes: "An orange flag: Urgent escalation." },
+    { code: "progressive", short: "Getting worse from day to day", text: "Has the headache been getting worse from day to day?", yes: "An orange flag: Urgent escalation." },
+    { code: "vomiting", short: "Vomiting", text: "Have you vomited?", yes: "With a new or different headache: Urgent escalation." },
+    { code: "gca-features", short: "Jaw pain when chewing, or a tender scalp", text: "Does your jaw hurt when you chew? Is your scalp sore to the touch?", yes: "At 50 or older with a new headache: possible giant cell arteritis, Emergency escalation.", minAge: 50 },
+  ];
+  const HQ_BY_CODE = Object.fromEntries(HQ.filter(q => q.code).map(q => [q.code, q]));
+
+  // The flags the rule can fire ("Fired Flags"), in words, with the evidence behind each
+  const FLAGS = {
+    "co-exposure": { level: "ed", label: "Possible carbon monoxide exposure", source: "StatPearls: Carbon Monoxide Poisoning" },
+    "thunderclap": { level: "ed", label: "Thunderclap onset: worst within 5 minutes", source: "NICE CG150 1.1.1; StatPearls: Thunderclap Headache" },
+    "neuro-deficit": { level: "ed", label: "New neurological symptoms", source: "NICE CG150 1.1.1" },
+    "altered-consciousness": { level: "ed", label: "Confusion, drowsiness or fainting", source: "NICE CG150 1.1.1" },
+    "meningism": { level: "ed", label: "Fever with neck pain or stiffness", source: "StatPearls: Bacterial Meningitis; van de Beek et al., NEJM 2004" },
+    "ottawa-sah": { level: "ed", label: "Ottawa SAH Rule: new, severe, peaked within an hour, plus a criterion", source: "Perry et al., JAMA 2013" },
+    "eye-pain-vision": { level: "ed", label: "Painful red eye or vision changes", source: "NICE CG150 1.1.1; StatPearls: Acute Angle-Closure Glaucoma" },
+    "fever-worsening": { level: "emergency", label: "Fever with a worsening headache", source: "NICE CG150 1.1.1" },
+    "pregnancy-or-postpartum": { level: "emergency", label: "New headache in pregnancy or after giving birth", source: "StatPearls: Postpartum Headache" },
+    "gca": { level: "emergency", label: "Age 50+, new headache, jaw or scalp pain (possible giant cell arteritis)", source: "StatPearls: Giant Cell Arteritis" },
+    "head-trauma": { level: "emergency", label: "Head injury in the last 3 months", source: "NICE CG150 1.1.1; SNNOOP10" },
+    "immunocompromised": { level: "emergency", label: "New headache with a weakened immune system", source: "NICE CG150 1.1.2; SNNOOP10" },
+    "new-or-changed": { level: "urgent", label: "New or different headache", source: "SNNOOP10; NICE CG150 1.1.1" },
+    "progressive": { level: "urgent", label: "Getting worse from day to day", source: "SNNOOP10; NICE CG150 1.1.1" },
+    "positional": { level: "urgent", label: "Changes when lying down or standing up", source: "NICE CG150 1.1.1; SNNOOP10" },
+    "valsalva-exertion": { level: "urgent", label: "Triggered by coughing, straining or effort", source: "NICE CG150 1.1.1" },
+    "cancer-history": { level: "urgent", label: "New headache with a history of cancer", source: "NICE CG150 1.1.2" },
+    "vomiting": { level: "urgent", label: "Vomiting with a new headache", source: "NICE CG150 1.1.2" },
+    "severe-pain": { level: "urgent", label: "Severe pain: 8 or more out of 10", source: "The protocol: intensity is a lower-priority criterion" },
+  };
+  const FLAG_LEVELS = { ed: "Red flag → ED escalation", emergency: "Orange flag → Emergency escalation", urgent: "Orange flag → Urgent escalation" };
 
   const chatLog = document.getElementById("chat-log");
   const chatReplies = document.getElementById("chat-replies");
+  const chatProgress = document.getElementById("chat-progress");
+  const chatBar = document.getElementById("chat-bar");
   const ioIn = document.getElementById("io-in");
   const ioOut = document.getElementById("io-out");
   let chatSession = 0;
@@ -1508,6 +2082,8 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   };
   const sum = list => list.reduce((a, b) => a + b, 0);
   const timeOf = iso => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  // A list output as the trace shows it, "[a, b]" → ["a", "b"]
+  const listOf = text => (typeof text === "string" && /^\[.*\]$/.test(text) ? text.slice(1, -1).split(",").map(t => t.trim()).filter(Boolean) : []);
 
   function say(content, who, label) {
     const m = el("div", "msg " + (who || "bot"));
@@ -1516,6 +2092,13 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     chatLog.append(m);
     chatLog.scrollTop = chatLog.scrollHeight;
     return m;
+  }
+  function note(text, cls, tip) {
+    const n = el("div", "sys-note " + (cls || ""));
+    n.append(el("span", "dot"), text);
+    if (tip) n.dataset.tip = tip;
+    chatLog.append(n);
+    chatLog.scrollTop = chatLog.scrollHeight;
   }
   function choices(options) {
     const my = chatSession;
@@ -1540,28 +2123,39 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     say(text, "bot", label);
     return choices(options);
   }
+  function progress(n, total) {
+    if (n == null) { chatProgress.hidden = true; chatBar.style.width = "0"; return; }
+    chatProgress.hidden = false;
+    chatProgress.textContent = `Question ${n} of ${total}`;
+    chatBar.style.width = (100 * (n - 1)) / total + "%";
+  }
   const ANSWER_OPTIONS = ANSWERS.map((label, value) => ({ label, value, tip: `Counts as ${value} point${value === 1 ? "" : "s"} towards the questionnaire total.` }));
-  // Pain bands of the 0–10 numeric rating scale; the rule's own thresholds live in SymptomTriage.cql
+  // Pain bands of the 0–10 numeric rating scale; the rules' own thresholds live in the .cql files
   const painTip = n => `${n} of 10: ${n === 0 ? "no pain" : n <= 3 ? "mild pain" : n <= 6 ? "moderate pain" : "severe pain"}.`;
   const presetTip = p => `Use ready-made answers: PHQ-9 total ${sum(p.phq)} of 27, GAD-7 total ${sum(p.gad)} of 21${p.phq[8] ? `, item 9 answered “${ANSWERS[p.phq[8]]}”` : ""}.`;
-  const TIP_RESTART = "Clear the conversation and begin again. Your rule edits are kept.";
+  const TIP_RESTART = "Clear the conversation and begin again. Your rule edits and the patient background are kept.";
+  const TIP_SAVE = "Turn this conversation into a test patient: the same answers and background, with the engine's current decision as the expected result. Every future run checks it.";
 
   function startChat() {
     const my = ++chatSession;
     chatLog.replaceChildren();
     chatReplies.replaceChildren();
+    progress(null);
     ioIn.replaceChildren(el("p", "empty", "The data the chat sends to the engine will appear here."));
     ioOut.replaceChildren(el("p", "empty", "The engine's decision will appear here."));
+    const p = patientOf(background);
     (async () => {
       const topic = await ask(
-        "Hi! This is a demo chat: you answer as a patient, and the Input and Output panels show what data the rule engine received and what it decided.\nWhat shall we check?",
+        `Hi! This is a demo chat: you answer as a patient, and the Input and Output panels show what data the rule engine received and what it decided.\nYou are playing ${nameOf(p) || "the patient"}, ${ageFrom(p.birthDate)}. Click the name above to change the age or medical background.\nWhat shall we check?`,
         [
+          { label: "Headache", value: "headache", cls: "primary", tip: "Runs HeadacheTriage: an adult headache screen based on NICE CG150, SNNOOP10 and the Ottawa SAH Rule. It also reads the patient background." },
           { label: "Pain and symptoms", value: "pain", tip: "Runs the SymptomTriage rule: a pain score and danger signs." },
           { label: "Mood and anxiety", value: "mood", tip: "Runs the MoodScreening rule: the PHQ-9 depression and GAD-7 anxiety questionnaires." },
         ],
       );
       if (my !== chatSession) return;
-      if (topic === "pain") await painFlow(my);
+      if (topic === "headache") await headacheFlow(my);
+      else if (topic === "pain") await painFlow(my);
       else await moodFlow(my);
     })();
   }
@@ -1585,14 +2179,16 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     if (pain != null) facts.push({ kind: "pain", value: pain, at, source: "Patient" });
     for (const s of redFlagSymptoms()) {
       const known = SYMPTOMS[s.code];
-      const yes = await ask(`Do you have ${known ? known.question : "“" + (s.display || s.code) + "”"} right now?`, [
-        { label: "Yes", value: true, tip: "Report this symptom. It is on the red-flag list in vocabulary.json, so the rule goes straight to ED escalation." },
-        { label: "No", value: false, tip: "You do not have this symptom right now." },
+      const answer = await ask(`Do you have ${known ? known.question : "“" + (s.display || s.code) + "”"} right now?`, [
+        { label: "Yes", value: "Yes", tip: "Report this symptom. It is on the red-flag list in vocabulary.json, so the rule goes straight to ED escalation." },
+        { label: "No", value: "No", tip: "Recorded as “No”: a real answer. Only a “Yes” counts as a red flag." },
       ]);
       if (my !== chatSession) return;
-      if (yes) facts.push({ kind: "symptom", system: s.system, code: s.code, at, source: "Patient" });
+      facts.push({ kind: "symptom", system: s.system, code: s.code, answer, at, source: "Patient" });
     }
-    await finish(my, "SymptomTriage", facts);
+    say("Thank you! Sending your answers to the rule engine…");
+    const chat = { rule: "SymptomTriage", facts, sentLevel: null };
+    if (await step(my, chat, false)) await conclude(my, chat);
   }
 
   async function moodFlow(my) {
@@ -1608,14 +2204,17 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
       say("Over the last 2 weeks, how often have you been bothered by any of the following problems?");
       phq = [];
       for (let i = 0; i < PHQ9.length; i++) {
+        progress(i + 1, PHQ9.length + GAD7.length);
         phq.push(await ask(PHQ9[i], ANSWER_OPTIONS, `PHQ-9 · question ${i + 1} of ${PHQ9.length}`));
         if (my !== chatSession) return;
       }
       gad = [];
       for (let i = 0; i < GAD7.length; i++) {
+        progress(PHQ9.length + i + 1, PHQ9.length + GAD7.length);
         gad.push(await ask(GAD7[i], ANSWER_OPTIONS, `GAD-7 · question ${i + 1} of ${GAD7.length}`));
         if (my !== chatSession) return;
       }
+      progress(null);
     } else {
       ({ phq, gad } = PRESETS[mode]);
       say(`Example answers (0 = not at all … 3 = nearly every day):\nPHQ-9: ${phq.join(" · ")}\nGAD-7: ${gad.join(" · ")}`, "me");
@@ -1626,65 +2225,167 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
       { kind: "phq9-item9", answer: ANSWERS[phq[8]], at, source: "Patient" },
       { kind: "gad7", value: sum(gad), at, source: "Patient" },
     ];
-    await finish(my, "MoodScreening", facts, { phq, gad });
+    say("Thank you! Sending your answers to the rule engine…");
+    const chat = { rule: "MoodScreening", facts, sentLevel: null, answers: { phq, gad } };
+    if (await step(my, chat, false)) await conclude(my, chat);
+  }
+
+  // ---------- the headache screen ----------
+  const applicableQuestions = () => HQ.filter(q => !q.minAge || (backgroundAge() ?? 0) >= q.minAge);
+  const isAnswered = (chat, q) => chat.facts.some(f => (q.kind === "pain"
+    ? f.kind === "pain" && f.value != null
+    : f.kind === "headache-screen" && f.code === q.code && (f.answer != null || f.date != null)));
+  const NOT_SURE = { label: "Not sure", value: null, cls: "muted", tip: "Recorded as a question without an answer. The rule treats it as unknown, not as “no”, and asks for it again." };
+
+  function optionsFor(q) {
+    if (q.kind === "pain") {
+      return [...Array(11).keys()].map(n => ({ label: String(n), value: n, cls: "num", tip: painTip(n) + (n >= 8 ? " With no other flag, Urgent escalation." : "") }))
+        .concat([{ ...NOT_SURE, label: "Prefer not to answer" }]);
+    }
+    if (q.options) return [...q.options, NOT_SURE];
+    return [
+      { label: "Yes", value: "Yes", tip: q.yes },
+      { label: "No", value: "No", tip: "Recorded as “No”: a real answer, so the question counts as answered." },
+      NOT_SURE,
+    ];
+  }
+  // One answer → one fact: an answer code, a date (the head injury) or nothing at all ("not sure")
+  function factFor(q, value) {
+    const at = new Date().toISOString();
+    if (q.kind === "pain") return value == null ? { kind: "pain", at, source: "Patient" } : { kind: "pain", value, at, source: "Patient" };
+    const fact = { kind: "headache-screen", code: q.code };
+    if (value && value.daysAgo) {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() - value.daysAgo);
+      fact.date = isoDay(d);
+    } else if (value != null) {
+      fact.answer = value;
+    }
+    return { ...fact, at, source: "Patient" };
+  }
+
+  async function headacheFlow(my) {
+    const chat = { rule: "HeadacheTriage", facts: [], sentLevel: null };
+    const has = await ask("Do you have a headache right now?", [
+      { label: "Yes", value: "Yes", tip: "Start the headache screen: up to 17 short questions, the most important first." },
+      { label: "No", value: "No", tip: "Recorded as “No”. The protocol applies only to a headache now, so the engine will say it does not apply." },
+    ]);
+    if (my !== chatSession) return;
+    chat.facts.push({ kind: "headache", answer: has, at: new Date().toISOString(), source: "Patient" });
+    if (!(await step(my, chat, true))) return;
+    if (has === "Yes") {
+      say("I will ask a few short questions, the most important first, and stop as soon as one answer is enough to advise you. The Output panel shows the engine's decision after every answer.");
+      await screen(my, chat, applicableQuestions());
+    } else {
+      await conclude(my, chat);
+    }
+  }
+
+  async function screen(my, chat, list) {
+    for (let i = 0; i < list.length; i++) {
+      const q = list[i];
+      progress(i + 1, list.length);
+      const value = await ask(q.text, optionsFor(q), `Headache screen · ${i + 1} of ${list.length}`);
+      if (my !== chatSession) return;
+      chat.facts.push(factFor(q, value));
+      if (!(await step(my, chat, true))) return;
+      if (STOP.has(chat.last.out.Disposition)) {
+        if (i < list.length - 1) say("I am stopping the questions here: this answer is enough to advise you.");
+        break;
+      }
+    }
+    await conclude(my, chat);
   }
 
   // ---------- run the engine on the chat answers ----------
-  async function finish(my, rule, facts, answers) {
+  // One engine run on everything answered so far. The level already sent to the care team becomes
+  // "Current Level", so a later answer raises a new alert only when it calls for a higher level.
+  async function step(my, chat, live) {
+    const r = await evaluate(my, chat, live);
+    if (!r) return false;
+    chat.last = r;
+    const level = r.out["New Level"];
+    if (level) {
+      chat.sentLevel = level;
+      if (live) note(`Care team alerted: ${level}`, LEVEL_CLS[level], "The rule raised the level, so an alert goes to the care team now, before the screen is finished. Later answers can only raise it further.");
+    }
+    return true;
+  }
+
+  async function evaluate(my, chat, live) {
     const scenario = {
       name: "",
-      rule,
+      rule: chat.rule,
       now: new Date().toISOString(),
       lastRun: null,
-      currentLevel: null, // the chat plays a patient with no earlier alerts
-      facts,
+      currentLevel: chat.sentLevel, // the chat starts with no earlier alerts
+      ...backgroundForEngine(),
+      facts: chat.facts.slice(),
     };
-    renderInput(scenario, answers);
-    say("Thank you! Sending your answers to the rule engine…");
-    ioOut.replaceChildren(el("p", "empty", "The engine is working…"));
-    await firstRun;
+    renderInput(scenario, chat.answers);
+    if (!live) ioOut.replaceChildren(el("p", "empty", "The engine is working…"));
     await new Promise(r => setTimeout(r, 30)); // let the page paint before a possible recompile
-    if (my !== chatSession) return;
+    if (my !== chatSession) return null;
 
     const compiled = compileSources(currentSources(), false);
     let vocabulary = null;
     try { vocabulary = JSON.parse(files["vocabulary.json"]); } catch (e) { /* reported below */ }
     let problem = null;
     if (compiled.errors.length) problem = "The rules currently have a compilation error. Fix it in “Rules & tests” or press “Reset changes” there.";
-    else if (!compiled.elm[rule]) problem = `Rule ${rule} not found: it needs the file ${rule}.cql.`;
+    else if (!compiled.elm[chat.rule]) problem = `Rule ${chat.rule} not found: it needs the file ${chat.rule}.cql.`;
     else if (!vocabulary) problem = "vocabulary.json cannot be parsed. Fix it in “Rules & tests”.";
     let result = null;
     if (!problem) {
       try {
-        result = await DemoEngine.runScenario(compiled.elm, rule, scenario, vocabulary);
+        result = await DemoEngine.runScenario(compiled.elm, chat.rule, scenario, vocabulary);
       } catch (e) {
         problem = "The engine stopped: " + String((e && e.message) || e).split("\n")[0];
       }
     }
-    if (my !== chatSession) return;
+    if (my !== chatSession) return null;
     if (problem) {
+      progress(null);
       ioOut.replaceChildren(el("p", "empty", problem));
       say(problem);
       choices([{ label: "Start over", value: "restart", cls: "primary", silent: true, tip: TIP_RESTART }]).then(() => startChat());
-      return;
+      return null;
     }
+    const out = Object.fromEntries(result.trace.map(([s, value]) => [s, value === "null" ? null : value]));
+    const r = { scenario, out, trace: result.trace, verdict: interpret(chat.rule, out) };
+    renderOutput(chat.rule, r, live);
+    return r;
+  }
 
-    const out = Object.fromEntries(result.trace.map(([step, value]) => [step, value === "null" ? null : value]));
-    const verdict = interpret(rule, out);
-    renderOutput(rule, scenario, out, result.trace, verdict);
+  async function conclude(my, chat) {
+    progress(null);
+    const r = chat.last;
+    renderOutput(chat.rule, r, false);
     const body = document.createDocumentFragment();
-    body.append(el("b", null, verdict.title), verdict.text);
+    body.append(el("b", null, r.verdict.title), r.verdict.text);
+    const flags = chat.rule === "HeadacheTriage" ? listOf(r.out["Fired Flags"]) : [];
+    if (flags.length) body.append(el("span", "why", "Why: " + flags.map(f => (FLAGS[f] ? FLAGS[f].label : f)).join(" · ")));
     const decision = say(body);
-    decision.classList.add("decision", verdict.cls);
-    waves.light(decision, verdict.cls);
+    decision.classList.add("decision", r.verdict.cls);
+    waves.light(decision, r.verdict.cls);
 
-    const next = await choices([
-      { label: "Start over", value: "restart", cls: "primary", silent: true, tip: TIP_RESTART },
-      { label: "Save as a test scenario", value: "save", silent: true, tip: "Turn this conversation into a test patient: the same answers, with the engine's current decision as the expected result. Every future run checks it." },
-    ]);
+    const missing = chat.rule === "HeadacheTriage" && r.out.Applies === "true" && !STOP.has(r.out.Disposition)
+      ? applicableQuestions().filter(q => !isAnswered(chat, q)) : [];
+    const asking = /^Ask/.test(r.out.Disposition || "");
+    const options = [];
+    if (missing.length) {
+      options.push({
+        label: missing.length === 1 ? "Answer the skipped question" : `Answer the ${missing.length} skipped questions`,
+        value: "missing", cls: asking ? "primary" : undefined, silent: true,
+        tip: "Ask again only the questions that have no answer yet. The engine re-runs after each one.",
+      });
+    }
+    options.push({ label: "Start over", value: "restart", cls: missing.length && asking ? undefined : "primary", silent: true, tip: TIP_RESTART });
+    options.push({ label: "Save as a test scenario", value: "save", silent: true, tip: TIP_SAVE });
+    const next = await choices(options);
     if (my !== chatSession) return;
     if (next === "restart") { startChat(); return; }
-    const file = saveAsScenario(rule, scenario, out, verdict);
+    if (next === "missing") { await screen(my, chat, missing); return; }
+    const file = saveAsScenario(chat.rule, r);
     say(`Saved as test patient ${label(file)}. It is now checked together with all the others: Rules & tests → Scenarios.`);
     const after = await choices([
       { label: "Start over", value: "restart", cls: "primary", silent: true, tip: TIP_RESTART },
@@ -1696,10 +2397,16 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   }
 
   function interpret(rule, out) {
+    if (rule === "HeadacheTriage" && out.Applies !== "true") {
+      return { cls: "none", title: "No headache to assess", text: "The headache protocol starts only when you have a headache now, so the engine draws no conclusion and raises no alert. For other complaints, try “Pain and symptoms” or “Mood and anxiety”." };
+    }
     const base = DISPOSITIONS[out.Disposition] || { cls: "ask", title: out.Disposition || "No decision", text: "This engine answer has no description on the page yet." };
     const v = { ...base };
     if (out.Disposition === "Reassure" && rule === "SymptomTriage") {
       v.text = "Your pain is mild and there are no danger signs. Continue your treatment plan and let us know if anything changes.";
+    }
+    if (out.Disposition === "Reassure" && rule === "HeadacheTriage") {
+      v.text = "Nothing in your answers needs a doctor now. Rest and follow your usual plan for headaches. Get help again if the headache suddenly becomes severe or changes, or if you notice weakness, numbness, trouble speaking, confusion or a seizure — then call emergency services.";
     }
     if (out.Disposition === "Reassure" && rule === "MoodScreening") {
       const minimal = out["PHQ-9 Severity"] === "Minimal" && out["GAD-7 Severity"] === "Minimal";
@@ -1711,11 +2418,12 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     return v;
   }
 
-  function notifyText(out, currentLevel) {
-    if (out["New Level"]) return `The care team gets a new alert: ${out["New Level"]}.`;
-    if (out["Proposed Level"] && out["Proposed Level"] !== "No escalation required") {
-      return `No new alert: the patient is already at ${currentLevel}, and the new answers do not call for a higher level.`;
+  function notifyText(out, currentLevel, live) {
+    if (out["New Level"]) return live ? `A new alert goes to the care team now: ${out["New Level"]}. The screen goes on.` : `The care team gets a new alert: ${out["New Level"]}.`;
+    if (currentLevel && out["Proposed Level"] && out["Proposed Level"] !== "No escalation required") {
+      return `No new alert: the care team was already alerted at ${currentLevel}, and the answers do not call for a higher level.`;
     }
+    if (!out["Proposed Level"] && live) return "No level yet: the rule needs more answers before it decides.";
     return "No alert for the care team is needed.";
   }
 
@@ -1733,55 +2441,103 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     wrap.append(t);
     return wrap;
   }
-  function details(summary, content, tip) {
+  // Disclosures keep their open state while the panels re-render after every answer
+  const openDetails = new Set();
+  function details(key, summary, content, tip) {
     const d = el("details");
     const sm = el("summary", null, summary);
     if (tip) sm.dataset.tip = tip;
     d.append(sm, content);
+    d.open = openDetails.has(key);
+    d.addEventListener("toggle", () => { if (d.open) openDetails.add(key); else openDetails.delete(key); });
     return d;
   }
+  const emptyCell = text => { const td = el("td", "fact"); td.append(el("span", "null", text)); return td; };
+  const codeOf = coding => `${SYSTEMS[coding.system] || coding.system} ${coding.code}`;
 
   function describeFact(fact, index) {
     const obs = DemoEngine.toObservation(fact, index);
-    const coding = obs.code.coding[0];
-    const code = `${SYSTEMS[coding.system] || coding.system} ${coding.code}`;
-    if (fact.kind === "pain") return ["Pain on a 0–10 scale", String(fact.value), code];
-    if (fact.kind === "phq9") return ["Depression: PHQ-9 total score (0–27)", String(fact.value), code];
-    if (fact.kind === "gad7") return ["Anxiety: GAD-7 total score (0–21)", String(fact.value), code];
-    if (fact.kind === "phq9-item9") {
-      const answer = obs.valueCodeableConcept.coding[0];
-      return ["PHQ-9 item 9: thoughts of death or self-harm", `${fact.answer} (${answer.code})`, code];
+    const code = codeOf(obs.code.coding[0]);
+    const source = SOURCE_NAMES[fact.source || "Patient"] || fact.source;
+    if (fact.kind === "pain") return ["Pain on a 0–10 scale", fact.value != null ? String(fact.value) : emptyCell("no answer"), code, source];
+    if (fact.kind === "phq9") return ["Depression: PHQ-9 total score (0–27)", String(fact.value), code, source];
+    if (fact.kind === "gad7") return ["Anxiety: GAD-7 total score (0–21)", String(fact.value), code, source];
+    if (fact.kind === "phq9-item9") return ["PHQ-9 item 9: thoughts of death or self-harm", `${fact.answer} (${obs.valueCodeableConcept.coding[0].code})`, code, source];
+    if (fact.kind === "symptom") return ["Symptom: " + ((SYMPTOMS[fact.code] && SYMPTOMS[fact.code].name) || fact.code), fact.answer || "present", code, source];
+    if (fact.kind === "headache") return ["Headache now", fact.answer || emptyCell("no answer"), code, source];
+    if (fact.kind === "headache-screen") {
+      const q = HQ_BY_CODE[fact.code];
+      const option = q && q.options && q.options.find(o => o.value === fact.answer);
+      const value = fact.date ? `injury on ${fact.date}` : fact.answer != null ? (option ? option.label : fact.answer) : emptyCell("no answer");
+      return [q ? q.short : fact.code, value, code, source];
     }
-    if (fact.kind === "symptom") return ["Symptom: " + ((SYMPTOMS[fact.code] && SYMPTOMS[fact.code].name) || fact.code), "present", code];
-    return [fact.kind || "Fact", fact.value != null ? String(fact.value) : "present", code];
+    return [fact.kind || "Fact", fact.value != null ? String(fact.value) : fact.answer || "present", code, source];
+  }
+  // Background resources go to the engine as they are; profile facts are shown in words
+  function describeResource(r) {
+    if (r.resourceType !== "Observation") return [`${r.resourceType}${r.id ? "/" + r.id : ""}`, "passed as is", "", "background"];
+    const coding = (r.code && r.code.coding && r.code.coding[0]) || {};
+    const item = coding.system === PROFILE_SYSTEM && PROFILE.find(i => i.code === coding.code);
+    const concept = r.valueCodeableConcept && r.valueCodeableConcept.coding && r.valueCodeableConcept.coding[0];
+    const value = concept ? concept.display || concept.code : r.valueQuantity ? String(r.valueQuantity.value) : r.valueDateTime || emptyCell("no value");
+    const source = sourceOf(r);
+    return [item ? "Background: " + item.display.toLowerCase() : "Observation", value, coding.code ? codeOf(coding) : "", source ? SOURCE_NAMES[source] || source : "no source tag"];
   }
 
   function renderInput(scenario, answers) {
     const ctx = el("div", "ctx");
     const fact = (k, v) => { const s = el("span", null, k + " "); s.append(el("b", null, v)); ctx.append(s); };
     fact("Rule:", scenario.rule);
+    fact("Patient:", `${nameOf(scenario.patient) || "patient"}, ${ageFrom(scenario.patient.birthDate)}`);
     fact("Assessed at:", timeOf(scenario.now));
     const parts = [ctx];
-    if (scenario.facts.length) {
-      parts.push(table(["Fact", "Value", "Code", "Source"], scenario.facts.map((f, i) => [...describeFact(f, i), "patient"]), ["fact", "fact", "code", "fact"]));
-    } else {
-      parts.push(el("p", "empty", "No facts: the patient reported nothing. The engine receives only the context."));
-    }
+    const rows = [...scenario.resources.map(describeResource), ...scenario.facts.map(describeFact)];
+    const facts = table(["Fact", "Value", "Code", "Source"], rows, ["fact", "fact", "code", "fact"]);
+    facts.classList.add("facts-scroll");
+    if (scenario.facts.length) facts.querySelector("tr:last-child").classList.add("newest");
+    parts.push(facts);
+    if (!scenario.facts.length) parts.push(el("p", "empty", "No answers yet: the engine receives only the patient background."));
     if (answers) {
       parts.push(el("p", "notify", `The chat adds up the individual answers: PHQ-9 ${answers.phq.join(" · ")} = ${sum(answers.phq)}; GAD-7 ${answers.gad.join(" · ")} = ${sum(answers.gad)}. The engine receives the total scores and the item 9 answer — that is how the rule is built.`));
     }
-    parts.push(details("How the engine sees it: FHIR (JSON)", el("pre", "json", JSON.stringify(DemoEngine.toBundle(scenario), null, 2)), "Show the exact FHIR resources (a Patient and one Observation per fact) passed to the engine."));
+    parts.push(details("in-fhir", "How the engine sees it: FHIR (JSON)", el("pre", "json", JSON.stringify(DemoEngine.toBundle(scenario), null, 2)), "Show the exact FHIR Bundle passed to the engine: the Patient, the background and one Observation per answer."));
     ioIn.replaceChildren(...parts);
+    facts.scrollTop = facts.scrollHeight;
   }
 
-  function renderOutput(rule, scenario, out, trace, verdict) {
+  function whyBox(out) {
+    const box = el("div", "why-box");
+    box.append(el("h4", null, "Why this level"));
+    const flags = listOf(out["Fired Flags"]);
+    if (flags.length) {
+      const ul = el("ul", "flags");
+      for (const code of flags) {
+        const info = FLAGS[code] || { level: "ask", label: code, source: "" };
+        const li = el("li", "flag " + info.level);
+        li.append(el("b", null, info.label), el("span", null, `${FLAG_LEVELS[info.level] || ""} · ${info.source}`));
+        li.dataset.tip = `Code “${code}” in the rule's Fired Flags output: the alert text for the care team lists every flag.`;
+        ul.append(li);
+      }
+      box.append(ul);
+    } else if (out["Proposed Level"] === "No escalation required") {
+      box.append(el("p", "notify", `No flag fired, and the pain score (${out["Pain Now"]} of 10) is below the threshold of 8.`));
+    } else {
+      box.append(el("p", "notify", "No flag has fired so far."));
+    }
+    return box;
+  }
+
+  function renderOutput(rule, r, live) {
+    const { scenario, out, trace, verdict } = r;
+    const parts = [];
+    if (live) parts.push(el("p", "live", `Live: the engine re-runs after every answer (${scenario.facts.length} so far).`));
     const card = el("div", "verdict " + verdict.cls);
     if (out["Proposed Level"]) card.append(el("span", "level", out["Proposed Level"]));
     card.append(el("h3", null, verdict.title), el("p", null, verdict.text));
     if (verdict.crisis) {
       card.append(el("p", "crisis", "If you are struggling right now, please reach out: call your local emergency number, or a crisis line — 988 in the US (call or text), Lifeline Ukraine 7333, or 112 in Europe."));
     }
-    const parts = [card];
+    parts.push(card);
     if (rule === "MoodScreening") {
       const list = el("ul", "scores");
       const line = (name, score, max, severity) => {
@@ -1797,25 +2553,27 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
       list.append(li);
       parts.push(list);
     }
-    parts.push(el("p", "notify", notifyText(out, scenario.currentLevel)));
-    const keys = (KEY_OUTPUTS[rule] || trace.map(([step]) => step).slice(-3)).filter(k => k in out);
+    if (rule === "HeadacheTriage" && out.Applies === "true") parts.push(whyBox(out));
+    parts.push(el("p", "notify", notifyText(out, scenario.currentLevel, live)));
+    const keys = (KEY_OUTPUTS[rule] || trace.map(([s]) => s).slice(-3)).filter(k => k in out);
     parts.push(el("p", "notify", "What the engine returned (values of the rule's steps):"));
     parts.push(table(["Rule step", "Value"], keys.map(k => [k, valueCell(out[k] == null ? "null" : out[k])])));
-    parts.push(details(`All rule steps (${trace.length})`, table(["Step (define)", "Value"], trace.map(([step, value]) => [step, valueCell(value)])), "Show the value of every define in the rule, in order: how the engine got to its decision."));
+    parts.push(details("out-trace", `All rule steps (${trace.length})`, table(["Step (define)", "Value"], trace.map(([s, value]) => [s, valueCell(value)])), "Show the value of every define in the rule, in order: how the engine got to its decision."));
     ioOut.replaceChildren(...parts);
   }
 
-  // Turn a chat run into a regression test: same facts, the engine's answer becomes the expectation
-  function saveAsScenario(rule, scenario, out, verdict) {
-    const typed = v => (v === "true" ? true : v === "false" ? false : v != null && /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v);
+  // Turn a chat run into a regression test: same facts and background, the engine's answer becomes the expectation
+  function saveAsScenario(rule, r) {
+    const typed = v => (v === "true" ? true : v === "false" ? false : v != null && /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v != null && /^\[.*\]$/.test(v) ? listOf(v) : v);
     const expect = {};
-    for (const k of KEY_OUTPUTS[rule] || ["Disposition"]) if (k in out) expect[k] = typed(out[k]);
-    const s = { ...scenario, name: `Chat: ${verdict.title} (${out.Disposition ?? "no decision"})`, expect };
+    for (const k of KEY_OUTPUTS[rule] || ["Disposition"]) if (k in r.out) expect[k] = typed(r.out[k]);
+    const s = { ...r.scenario, name: `Chat: ${r.verdict.title} (${r.out.Disposition ?? "no decision"})`, expect };
     if (rule === MAIN) delete s.rule;
     syncCurrent();
+    const slug = { SymptomTriage: "pain", MoodScreening: "mood", HeadacheTriage: "headache" }[rule] || "chat";
     let n = 30;
     let file;
-    do { file = `scenarios/${n}-chat-${rule === "MoodScreening" ? "mood" : "pain"}.json`; n++; } while (file in files);
+    do { file = `scenarios/${n}-chat-${slug}.json`; n++; } while (file in files);
     files[file] = JSON.stringify(s, null, 2) + "\n";
     save();
     renderTabs();
@@ -1882,10 +2640,12 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
 
   // ---------- start ----------
   openFile(current);
-  showView(location.hash === "#rules" ? "rules" : "chat", false);
+  setBackgroundEditor(JSON.stringify(background, null, 2));
+  renderBackgroundForm();
+  showView(VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "chat", false);
   startChat();
   if (window.DemoEngine) {
-    firstRun = run();
+    run(false);
   } else {
     setPill("bad", "The engine did not load. Reload the page.");
     runBtn.disabled = true;

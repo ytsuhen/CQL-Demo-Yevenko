@@ -26,7 +26,7 @@ define "Pain Now":
   ("Pain Evidence".value as FHIR.Quantity).value
 
 define "Red Flag Reported":
-  exists Patterns."In Window"(Patterns."From Patient"([Observation: "Red-flag symptoms"]), "Window")
+  exists Patterns."Answered Yes"(Patterns."In Window"(Patterns."From Patient"([Observation: "Red-flag symptoms"]), "Window"))
 
 define "Proposed Level":
   case

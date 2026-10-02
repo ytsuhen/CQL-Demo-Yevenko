@@ -1,0 +1,11 @@
+{
+  "name": "Stiff neck answered No, mild pain -> not a red flag, no escalation required",
+  "now": "2026-10-01T14:00:00Z",
+  "lastRun": "2026-10-01T09:00:00Z",
+  "currentLevel": null,
+  "facts": [
+    { "kind": "pain", "value": 2, "at": "2026-10-01T13:00:00Z", "source": "Patient" },
+    { "kind": "symptom", "code": "161882006", "answer": "No", "at": "2026-10-01T13:10:00Z", "source": "Patient" }
+  ],
+  "expect": { "Red Flag Reported": false, "Proposed Level": "No escalation required", "Disposition": "Reassure" }
+}

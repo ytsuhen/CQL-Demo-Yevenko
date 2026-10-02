@@ -1,0 +1,13 @@
+{
+  "name": "Neuro deficit Yes, every other question unanswered -> ED at once",
+  "rule": "HeadacheTriage",
+  "now": "2026-10-01T14:00:00Z",
+  "lastRun": null,
+  "currentLevel": null,
+  "birthDate": "1991-04-15",
+  "facts": [
+    { "kind": "headache", "answer": "Yes", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "neuro-deficit", "answer": "Yes", "at": "2026-10-01T13:50:00Z", "source": "Patient" }
+  ],
+  "expect": { "Proposed Level": "ED escalation", "Disposition": "Emergency Department evaluation", "Ask Headache Screen": true }
+}

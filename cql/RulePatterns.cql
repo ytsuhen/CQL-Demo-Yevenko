@@ -3,6 +3,9 @@ library RulePatterns version '0.1.0'
 using FHIR version '4.0.1'
 include FHIRHelpers version '4.0.1' called FHIRHelpers
 
+codesystem "LOINC": 'http://loinc.org'
+code "Yes": 'LA33-6' from "LOINC" display 'Yes'
+
 // Building blocks every clinical rule reuses.
 
 // Conversation window: since the last run, but at least `lookback` back
@@ -16,6 +19,23 @@ define function "From Sources"(obs List<Observation>, sources List<System.String
 
 define function "From Patient"(obs List<Observation>):
   "From Sources"(obs, { 'Patient', 'RPM' })
+
+// Background facts (pregnancy, immunosuppression, cancer history) may also be entered by a clinician
+define function "From Record"(obs List<Observation>):
+  "From Sources"(obs, { 'Patient', 'RPM', 'MANUAL' })
+
+// A question counts as answered only when its Observation has a value: an empty Observation is no answer
+define function "Answered"(obs List<Observation>):
+  obs O where O.value is not null
+
+// A yes/no question raises a flag only on Yes: "No" is a fact, not a flag
+define function "Answered Yes"(obs List<Observation>):
+  obs O where (O.value as FHIR.CodeableConcept) ~ "Yes"
+
+// Facts whose value is a date no older than `lookback`, e.g. a head injury in the last 90 days.
+// The fact itself is recorded when the patient answers; the date of the event is its value.
+define function "Dated Within"(obs List<Observation>, lookback System.Quantity):
+  obs O where date from (O.value as FHIR.dateTime).value >= Today() - lookback
 
 // Facts whose clinical time falls in the window
 define function "In Window"(obs List<Observation>, w Interval<DateTime>):

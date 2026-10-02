@@ -101,16 +101,29 @@ export function compile(sources) {
 
 // ---------- scenario facts → FHIR ----------
 
-// Shorthands for common facts: kind → LOINC code
+const LOINC = "http://loinc.org";
+const SNOMED = "http://snomed.info/sct";
+
+// Shorthands for common facts: kind → code
 const KINDS = {
-  pain: { code: "72514-3", display: "Pain severity 0-10" },
-  phq9: { code: "44261-6", display: "PHQ-9 total score" },
-  "phq9-item9": { code: "44260-8", display: "PHQ-9 item 9: thoughts of being better off dead or of self-harm" },
-  gad7: { code: "70274-6", display: "GAD-7 total score" },
+  pain: { system: LOINC, code: "72514-3", display: "Pain severity 0-10" },
+  phq9: { system: LOINC, code: "44261-6", display: "PHQ-9 total score" },
+  "phq9-item9": { system: LOINC, code: "44260-8", display: "PHQ-9 item 9: thoughts of being better off dead or of self-harm" },
+  gad7: { system: LOINC, code: "70274-6", display: "GAD-7 total score" },
+  headache: { system: SNOMED, code: "25064002", display: "Headache" },
 };
 
-// PHQ answers → LOINC answer codes
+// Kinds whose code comes from the fact itself: a local question code or a SNOMED CT symptom
+const CODE_SYSTEMS = {
+  "headache-screen": "urn:example:cql-demo:headache",
+  profile: "urn:example:cql-demo:profile",
+  symptom: SNOMED,
+};
+
+// Answers with standard LOINC answer codes: yes/no and the PHQ frequency scale
 const LOINC_ANSWERS = {
+  Yes: "LA33-6",
+  No: "LA32-8",
   "Not at all": "LA6568-5",
   "Several days": "LA6569-3",
   "More than half the days": "LA6570-1",
@@ -120,22 +133,28 @@ const LOINC_ANSWERS = {
 // An answer word without a standard code gets a local code, so answers that still need a mapping stay visible
 const answerConcept = answer =>
   LOINC_ANSWERS[answer]
-    ? { coding: [{ system: "http://loinc.org", code: LOINC_ANSWERS[answer], display: answer }] }
+    ? { coding: [{ system: LOINC, code: LOINC_ANSWERS[answer], display: answer }] }
     : { coding: [{ system: "urn:example:cql-demo:answer", code: answer, display: answer }] };
 
-// One fact → one Observation. The source (Patient, RPM, MANUAL…) goes to meta.tag
+function factCode(fact) {
+  if (KINDS[fact.kind]) return { coding: [{ ...KINDS[fact.kind] }] };
+  return { coding: [{ system: fact.system ?? CODE_SYSTEMS[fact.kind] ?? SNOMED, code: fact.code }] };
+}
+
+// One fact → one Observation. The source (Patient, RPM, MANUAL…) goes to meta.tag.
+// The value is a number (value + unit), a coded answer (answer) or a date (date), or nothing at all:
+// an Observation without a value is a question that was asked but not answered.
 export function toObservation(fact, index) {
   return {
     resourceType: "Observation",
     id: fact.id ?? `fact-${index + 1}`,
     meta: { tag: [{ system: "urn:example:cql-demo:source", code: fact.source ?? "Patient" }] },
     status: fact.status ?? "final",
-    code: KINDS[fact.kind]
-      ? { coding: [{ system: "http://loinc.org", ...KINDS[fact.kind] }] }
-      : { coding: [{ system: fact.system ?? "http://snomed.info/sct", code: fact.code }] },
+    code: factCode(fact),
     subject: { reference: "Patient/demo" },
     effectiveDateTime: fact.at,
     ...(fact.answer != null ? { valueCodeableConcept: answerConcept(fact.answer) } : {}),
+    ...(fact.date != null ? { valueDateTime: fact.date } : {}),
     ...(fact.value != null
       ? {
           valueQuantity: {
@@ -149,12 +168,17 @@ export function toObservation(fact, index) {
   };
 }
 
+// The patient's bundle: the Patient (birthDate and anything else from `patient`), any ready-made
+// FHIR resources from `resources` (the patient background) and one Observation per fact
 export function toBundle(scenario) {
+  const patient = { ...(scenario.patient ?? {}), resourceType: "Patient", id: "demo" };
+  if (scenario.birthDate) patient.birthDate = scenario.birthDate;
   return {
     resourceType: "Bundle",
     type: "collection",
     entry: [
-      { resource: { resourceType: "Patient", id: "demo" } },
+      { resource: patient },
+      ...(scenario.resources ?? []).filter(r => r && r.resourceType !== "Patient").map(resource => ({ resource })),
       ...(scenario.facts ?? []).map((f, i) => ({ resource: toObservation(f, i) })),
     ],
   };
@@ -183,8 +207,9 @@ export async function runScenario(elm, rule, scenario, vocabulary) {
   const results = await new cql.Executor(library, codes, parameters).exec(patients, utc(scenario.now));
   const values = results.patientResults.demo;
 
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const failures = Object.entries(scenario.expect ?? {})
-    .filter(([step, want]) => plain(values[step]) !== want)
+    .filter(([step, want]) => !same(plain(values[step]), want))
     .map(([step, want]) => ({ step, expected: want, got: plain(values[step]) }));
   const trace = Object.entries(values)
     .filter(([step]) => step !== "Patient")
@@ -192,14 +217,16 @@ export async function runScenario(elm, rule, scenario, vocabulary) {
   return { pass: failures.length === 0, failures, trace };
 }
 
-// The value compared with expect: a number, string, boolean or null
-const plain = v => (v != null && typeof v === "object" && "value" in v ? v.value : v ?? null);
+// The value compared with expect: a number, string, boolean, null, or a list of those
+const plain = v => (Array.isArray(v) ? v.map(plain) : v != null && typeof v === "object" && "value" in v ? v.value : v ?? null);
+
+const isPrimitive = v => v == null || ["string", "number", "boolean"].includes(typeof v);
 
 // The value shown in the trace: short, and showing which fact was picked
 function show(v) {
   if (v == null) return "null";
   if (typeof v.unit === "string" && typeof v.value === "number") return `${v.value} '${v.unit}'`;
-  if (Array.isArray(v)) return `${v.length} fact(s)`;
+  if (Array.isArray(v)) return v.every(isPrimitive) ? `[${v.join(", ")}]` : `${v.length} fact(s)`;
   if (v.low !== undefined && v.high !== undefined) return `[${v.low} .. ${v.high}]`;
   if (v.id && v.effective) return `Observation/${v.id.value ?? v.id} at ${v.effective.value ?? v.effective}`;
   return String(v.value ?? v);

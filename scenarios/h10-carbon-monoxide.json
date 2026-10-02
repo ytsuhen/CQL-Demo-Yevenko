@@ -1,0 +1,28 @@
+{
+  "name": "Carbon monoxide suspicion and thunderclap -> CO wins: leave the area",
+  "rule": "HeadacheTriage",
+  "now": "2026-10-01T14:00:00Z",
+  "lastRun": null,
+  "currentLevel": null,
+  "birthDate": "1991-04-15",
+  "facts": [
+    { "kind": "headache", "answer": "Yes", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "co-exposure", "answer": "Yes", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "onset-peak", "answer": "within-5-min", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "onset-exertion", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "similarity", "answer": "usual", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "neuro-deficit", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "altered-consciousness", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "fever", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "neck-stiffness", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "eye-pain-vision", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "worsening", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "head-trauma", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "positional", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "valsalva-exertion", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "progressive", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "vomiting", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "pain", "value": 5, "at": "2026-10-01T13:50:00Z", "source": "Patient" }
+  ],
+  "expect": { "Proposed Level": "ED escalation", "Disposition": "Leave area and seek emergency care", "Fired Flags": ["co-exposure", "thunderclap"] }
+}

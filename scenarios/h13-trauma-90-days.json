@@ -1,0 +1,28 @@
+{
+  "name": "Head injury 90 days ago -> emergency escalation (window boundary)",
+  "rule": "HeadacheTriage",
+  "now": "2026-10-01T14:00:00Z",
+  "lastRun": null,
+  "currentLevel": null,
+  "birthDate": "1991-04-15",
+  "facts": [
+    { "kind": "headache", "answer": "Yes", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "co-exposure", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "onset-peak", "answer": "over-60-min", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "onset-exertion", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "similarity", "answer": "usual", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "neuro-deficit", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "altered-consciousness", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "fever", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "neck-stiffness", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "eye-pain-vision", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "worsening", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "head-trauma", "answer": null, "date": "2026-07-03", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "positional", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "valsalva-exertion", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "progressive", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "vomiting", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "pain", "value": 5, "at": "2026-10-01T13:50:00Z", "source": "Patient" }
+  ],
+  "expect": { "Recent Head Trauma": true, "Proposed Level": "Emergency escalation", "Disposition": "Provider evaluation required" }
+}
