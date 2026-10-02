@@ -2,7 +2,7 @@
 
 Andrii Yevenko · October 2026 · based on NCBI sources (PubMed, PMC, Bookshelf) and NICE CG150
 
-Implemented in [`cql/HeadacheTriage.cql`](../cql/HeadacheTriage.cql) and checked by test scenarios `h01`–`h21` in [`scenarios/`](../scenarios/). The escalation levels are illustrative: this demonstrates an approach, not a clinical recommendation.
+Implemented in [`cql/HeadacheTriage.cql`](../cql/HeadacheTriage.cql) and checked by test scenarios `h01`–`h25` in [`scenarios/`](../scenarios/). The escalation levels are illustrative: this demonstrates an approach, not a clinical recommendation.
 
 ## Purpose and scope
 
@@ -24,7 +24,7 @@ Branches are checked top-down and the first true one wins. Any positive flag out
 | 3 | At least one ED-level question unanswered | The highest orange flag so far, or null | Ask headache screen | Answer the rest; if the level is not null, the care team is already alerted |
 | 4 | An Emergency-level flag | Emergency escalation | Provider evaluation required | Seen by a doctor the same day |
 | 5 | An Urgent-level flag, or NRS ≥ 8 | Urgent escalation | Provider notification | Contact from the care team within a day |
-| 6 | Other questions unanswered, no flags | null | Ask headache screen | Answer the remaining questions |
+| 6 | A question that can still change the level is unanswered, no flags | null | Ask headache screen | Answer the remaining questions |
 | 7 | Screen complete, NRS 0–7 | No escalation required | Reassure | Self-care and when to seek help again |
 | 8 | Screen complete, no pain score | null | Ask pain score | Rate the pain |
 
@@ -57,11 +57,14 @@ These signs do not need an ambulance but do need a doctor: the same day (Emergen
 | Age ≥ 50, new or changed headache + jaw pain when chewing or a tender scalp | Emergency | Does your jaw hurt when you chew? Is your scalp sore to the touch? | `gca-features` | StatPearls, Giant Cell Arteritis: visual symptoms in 20–30% of patients |
 | Head injury in the last 3 months | Emergency | Have you hit your head recently? When? | `head-trauma` | NICE CG150, 1.1.1; SNNOOP10 |
 | Immunosuppression (HIV, immunosuppressive drugs) + new headache | Emergency | Profile | `immunocompromised` | NICE CG150, 1.1.2; SNNOOP10 |
-| New headache (first ever), a marked change from the usual, or progressive headache | Urgent | Similarity = first ever or different; is it getting worse from day to day? | `similarity`, `progressive` | SNNOOP10: pattern change or recent new headache, progressive headache; NICE CG150, 1.1.1 |
-| Headache that changes with posture | Urgent | Does it change when you lie down or stand up? | `positional` | NICE CG150, 1.1.1; SNNOOP10: intracranial hyper- or hypotension |
-| Headache triggered by coughing, sneezing, straining or exercise | Urgent | Does it start or get worse when you cough, sneeze, strain or exert yourself? | `valsalva-exertion` | NICE CG150, 1.1.1 |
+| New headache (first ever), or a marked change from the usual | Urgent | Similarity = first ever or different | `similarity` | SNNOOP10: pattern change or recent new headache; NICE CG150, 1.1.1 |
+| Progressive headache + new or changed headache | Urgent | Is it getting worse from day to day? | `progressive` | SNNOOP10: progressive headache; NICE CG150, 1.1.1 |
+| Headache that changes with posture + new or changed headache | Urgent | Does it change when you lie down or stand up? | `positional` | NICE CG150, 1.1.1; SNNOOP10: intracranial hyper- or hypotension |
+| Headache triggered by coughing, sneezing, straining or exercise + new or changed headache | Urgent | Does it start or get worse when you cough, sneeze, strain or exert yourself? | `valsalva-exertion` | NICE CG150, 1.1.1 |
 | History of cancer (one that spreads to the brain) + new headache | Urgent | Profile | `cancer-history` | NICE CG150, 1.1.2 |
 | Vomiting + new headache | Urgent | Have you vomited? | `vomiting` | NICE CG150, 1.1.2: vomiting without another obvious cause |
+
+Positional, cough-triggered and progressive features count only with a new or changed headache (owner decision, October 2026): with a headache like the usual ones they are not flags and are not asked. A new or changed headache is already Urgent, so these features, like vomiting and a cancer history, add detail to the alert but do not change the level.
 
 Loss of vision or double vision with suspected GCA already gives ED through “new neurological deficit”. NICE gives a migraine attack as an example of an “other obvious cause” of vomiting, but a patient cannot tell the difference, so the rule counts vomiting with any new headache.
 
@@ -72,11 +75,23 @@ The pain score affects the decision only when the screen is complete and no flag
 - NRS ≥ 8 → Urgent: a person in severe pain needs a pain-relief plan, not an ambulance.
 - NRS 0–7 → No escalation required, Disposition = Reassure.
 
-**Required questions.** ED-level: `co-exposure`, `onset-peak`, `onset-exertion`, `similarity`, `neuro-deficit`, `altered-consciousness`, `fever`, `neck-stiffness`, `eye-pain-vision`, plus the pain score when the pain is new and peaked within an hour (the Ottawa branch). The rest: `worsening`, `head-trauma`, `positional`, `valsalva-exertion`, `progressive`, `vomiting`; at age ≥ 50 also `gca-features`.
+**Which questions are asked.** The rule itself returns **Questions Needed**: the unanswered questions whose answer can still change the level, in the order to ask them. The chat asks the first one, runs the rule again and repeats, so a question is never asked when no answer to it could change the advice.
+
+| Question | Asked when |
+|---|---|
+| `co-exposure`, `onset-peak`, `similarity`, `neuro-deficit`, `altered-consciousness`, `fever`, `neck-stiffness`, `eye-pain-vision` | Always: ED-level, asked first |
+| `onset-exertion` | Only for the Ottawa branch: a new or changed headache that peaked in 5–60 minutes, age under 40 and no stiff neck (otherwise the rule is already met or cannot apply) |
+| Pain score (NRS) | ED-level in the Ottawa branch; otherwise only while no orange flag has fired, because it then decides between Reassure and Urgent |
+| `head-trauma` | While the level is below Emergency |
+| `worsening` | Only after “Yes” to fever, while the level is below Emergency |
+| `gca-features` | Age ≥ 50 and a new or changed headache, while the level is below Emergency |
+| `positional`, `valsalva-exertion`, `progressive`, `vomiting` | Never: they count only with a new or changed headache, which is already Urgent, so they cannot change the level |
+
+**Stopping early** (owner decision, October 2026). Nothing more is asked once the level is ED, or once it is Emergency and every ED-level question is answered: the remaining answers could not change the advice. The alert then lists only the flags found so far. A typical headache like the usual ones takes 10 questions instead of 16.
 
 - **“No” is a fact.** Each question is recorded as its own Observation with a yes/no answer. A flag fires only on “Yes”, and a question counts as answered only when it has a value. This closes two gaps of a plain “symptom present” model: an Observation without a value is not an answer, and a symptom answered “No” does not escalate.
 - **“Prefer not to answer”** (“Not sure” in the chat) means no answer.
-- **Ask Headache Screen** = true when at least one required question has no answer in the window. **Ask Pain Score** = true when there is no pain score in the window.
+- **Ask Headache Screen** = true when Questions Needed is not empty. **Ask Pain Score** = true when there is no pain score in the window.
 - **Proposed Level** = null only when no flag fired and an answer is missing. A positive flag does not wait for the screen to finish.
 
 Unlike a rule where only a pain score can be missing (and a missing score can never outrank a red flag), here unanswered questions can still reveal ED. So the ED-level questions come first, and while any of them is unanswered, Disposition = Ask headache screen, even if New Level has already sent the care team an Emergency or Urgent alert.
@@ -117,11 +132,11 @@ New building blocks in `RulePatterns`:
 - **From Record.** Profile facts also accept MANUAL, because a clinician enters them. Symptoms and answers are still accepted only from Patient and RPM.
 - **Dated Within(lookback).** The head-injury answer is recorded at the time of the conversation, and the date of the injury is its value (`valueDateTime`). The flag fires when that date is no older than 90 days. Symptoms stay in `Conversation Window(Last Run, 12 h)`.
 
-Outputs: Proposed Level, New Level (through Monotonic Escalation), Disposition, Ask Headache Screen, Ask Pain Score and **Fired Flags** — the list of codes of the flags that fired, for the alert text.
+Outputs: Proposed Level, New Level (through Monotonic Escalation), Disposition, Ask Headache Screen, Ask Pain Score, **Questions Needed** — the questions still worth asking, in order — and **Fired Flags** — the list of codes of the flags that fired, for the alert text.
 
 ## Test scenarios
 
-Twenty-one scenarios cover every branch, every boundary (NRS 7/8, age 39/40 and 49/50, injury 90/91 days ago), missing data, an untrusted source and the choice of the latest pain score. The base for all of them: headache “yes” in the window, every question “no”, similarity “like usual”, NRS 5, age 35, an empty profile, source Patient, Last Run and Current Level null.
+Twenty-five scenarios cover every branch, every boundary (NRS 7/8, age 39/40 and 49/50, injury 90/91 days ago), missing data, an untrusted source, the choice of the latest pain score and the question tree. The base for all of them: headache “yes” in the window, every question “no”, similarity “like usual”, NRS 5, age 35, an empty profile, source Patient, Last Run and Current Level null.
 
 | # | Change from the base | Proposed Level | Disposition | What it checks |
 |---|---|---|---|---|
@@ -140,14 +155,18 @@ Twenty-one scenarios cover every branch, every boundary (NRS 7/8, age 39/40 and 
 | H13 | Head injury 90 days ago | Emergency escalation | Provider evaluation required | The injury window boundary |
 | H14 | Head injury 91 days ago | No escalation required | Reassure | A fact outside the window has no effect |
 | H15 | `neuro-deficit` as an Observation without a value | null | Ask headache screen | An empty Observation is not an answer |
-| H16 | `neuro-deficit` “yes”, other questions unanswered | ED escalation | Emergency Department evaluation | A flag does not wait for the full screen |
-| H17 | `positional` “yes”, `eye-pain-vision` unanswered | Urgent escalation | Ask headache screen | An orange flag with ED questions incomplete |
+| H16 | `neuro-deficit` “yes”, other questions unanswered | ED escalation | Emergency Department evaluation | A flag does not wait for the full screen; nothing more is asked |
+| H17 | Head injury 2 weeks ago, `eye-pain-vision` unanswered | Emergency escalation | Ask headache screen | An orange flag with ED questions incomplete: only the ED question is still needed |
 | H18 | `neuro-deficit` “yes” from source MANUAL | null | Ask headache screen | A clinician's entry is not the patient's answer |
 | H19 | Immunosuppression in the profile (MANUAL), first ever | Emergency escalation | Provider evaluation required | From Record accepts MANUAL for the profile |
 | H20 | Current Level = ED escalation, `within-5-min` | ED escalation | Emergency Department evaluation | New Level = null, no repeat alert |
 | H21 | Two pain scores: 9 earlier, 4 now | No escalation required | Reassure | The latest score counts, not the highest |
+| H22 | Usual headache, age 55; exertion, worsening, posture, cough, day-to-day, vomiting and GCA unanswered | No escalation required | Reassure | None of those questions is needed for a usual headache |
+| H23 | Different headache, immunosuppressed; nothing after the ED questions | Emergency escalation | Provider evaluation required | Emergency with the ED questions answered stops the screen |
+| H24 | Fever “yes”, neck “no”, worsening unanswered | null | Ask headache screen | Fever makes the worsening question needed |
+| H25 | First headache like this, peak in 5–60 minutes, age 35 | Urgent escalation | Ask headache screen | The Ottawa branch makes exertion and the pain score ED-level questions |
 
-H15–H18 also check Ask Headache Screen = true; H20 checks New Level = null. Every base answer is an explicit “No”, so each scenario also checks that “No” never raises a flag.
+H15, H17 and H18 also check Ask Headache Screen = true; H16, H17 and H22–H25 check Questions Needed; H20 checks New Level = null. Every base answer is an explicit “No”, so each scenario also checks that “No” never raises a flag.
 
 ## Owner decisions and evidence limits
 
@@ -165,6 +184,8 @@ The protocol is deliberately sensitive: most flags have low specificity on their
 | Pregnancy | From the profile only | Ask all women of childbearing age; define the postpartum period and a blood-pressure threshold if RPM sends blood pressure |
 | Medication overuse (SNNOOP10) | Does not escalate | A separate output for a routine review |
 | “Don't know” on an ED-level question | As a missing answer → Ask | As “yes”, fail-safe, like PHQ-9 item 9 |
+| Positional, cough-triggered or progressive features with a headache like the usual ones | Not flags, not asked (decided October 2026) | Urgent flags with any headache, as in SNNOOP10: more sensitive, three more questions; a slowly growing secondary headache can feel “usual” to the patient |
+| Questions after the level can no longer change | Not asked (decided October 2026) | Ask everything so that the alert lists every flag |
 
 **Evidence limits.**
 

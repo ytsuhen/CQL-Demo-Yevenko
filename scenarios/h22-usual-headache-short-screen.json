@@ -1,0 +1,22 @@
+{
+  "name": "Usual headache at 55: exertion, worsening, posture, cough, day-to-day, vomiting and GCA are not needed",
+  "rule": "HeadacheTriage",
+  "now": "2026-10-01T14:00:00Z",
+  "lastRun": null,
+  "currentLevel": null,
+  "birthDate": "1971-04-15",
+  "facts": [
+    { "kind": "headache", "answer": "Yes", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "co-exposure", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "onset-peak", "answer": "over-60-min", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "similarity", "answer": "usual", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "neuro-deficit", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "altered-consciousness", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "fever", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "neck-stiffness", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "eye-pain-vision", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "head-trauma", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "pain", "value": 5, "at": "2026-10-01T13:50:00Z", "source": "Patient" }
+  ],
+  "expect": { "Age": 55, "Questions Needed": [], "Ask Headache Screen": false, "Proposed Level": "No escalation required", "Disposition": "Reassure" }
+}

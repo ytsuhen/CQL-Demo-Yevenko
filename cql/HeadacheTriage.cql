@@ -4,7 +4,8 @@ library HeadacheTriage version '0.1.0'
 // It does not diagnose: its job is not to miss a secondary headache. The decision rests on how the pain
 // started and on the signs that come with it, not on the pain score; the score is a lower-priority criterion.
 // Branches are checked top-down and the first true one wins. Any positive flag outranks both an incomplete
-// screen and the pain score. Escalation levels are illustrative for the demo, not a clinical recommendation.
+// screen and the pain score. The rule also decides which questions are still needed: only those whose answer
+// can still change the level. Escalation levels are illustrative for the demo, not a clinical recommendation.
 
 using FHIR version '4.0.1'
 include FHIRHelpers version '4.0.1' called FHIRHelpers
@@ -160,14 +161,16 @@ define "Emergency Flag":
 
 // ---------- orange flags → Urgent escalation ----------
 
+// Owner decision: with a headache like the usual ones these features do not count (and are not asked).
+// A new or changed headache is already Urgent, so they add detail to the alert but never change the level.
 define "Progressive":
-  "Said Yes"([Observation: "Progressive question"])
+  "Said Yes"([Observation: "Progressive question"]) and "New Or Changed Pain"
 
 define "Positional":
-  "Said Yes"([Observation: "Positional question"])
+  "Said Yes"([Observation: "Positional question"]) and "New Or Changed Pain"
 
 define "Valsalva Or Exertion":
-  "Said Yes"([Observation: "Valsalva or exertion"])
+  "Said Yes"([Observation: "Valsalva or exertion"]) and "New Or Changed Pain"
 
 define "Cancer Flag":
   "On Record"([Observation: "Cancer history"]) and "New Or Changed Pain"
@@ -182,33 +185,59 @@ define "Vomiting Flag":
 define "Urgent Flag":
   "New Or Changed Pain" or "Progressive" or "Positional" or "Valsalva Or Exertion" or "Cancer Flag" or "Vomiting Flag"
 
-// ---------- is the screen complete? ----------
+// ---------- which questions are still needed? ----------
 
-// ED-level questions come first; the pain score joins them when new pain peaked within an hour (Ottawa)
+// A question is needed only while it is unanswered and its answer can still change the level.
+// Once the level is ED nothing is asked; once it is Emergency only the ED-level questions remain.
+// The chat asks the first needed question, re-runs the rule and repeats.
+
+// ED-level questions come first. The time to peak and the similarity to usual headaches decide whether
+// the Ottawa SAH Rule applies; only then do onset on exertion and the pain score become ED-level.
+define "Ottawa Possible":
+  "Onset Peak" ~ "5 to 60 min" and "New Or Changed Pain"
+
+define "ED Questions Needed":
+  if "CO Exposure" or "Red Flag" then List<System.String>{}
+  else (List<System.String> {
+    if not "Was Answered"([Observation: "CO exposure"]) then 'co-exposure' else null,
+    if not "Was Answered"([Observation: "Onset to peak"]) then 'onset-peak' else null,
+    if not "Was Answered"([Observation: "Similarity"]) then 'similarity' else null,
+    if not "Was Answered"([Observation: "Neuro deficit"]) then 'neuro-deficit' else null,
+    if not "Was Answered"([Observation: "Altered consciousness"]) then 'altered-consciousness' else null,
+    if not "Was Answered"([Observation: "Fever question"]) then 'fever' else null,
+    if not "Was Answered"([Observation: "Neck stiffness"]) then 'neck-stiffness' else null,
+    if not "Was Answered"([Observation: "Eye pain or vision"]) then 'eye-pain-vision' else null,
+    // exertion is one of the Ottawa criteria; age 40+ or a stiff neck already meets the rule
+    if "Ottawa Possible" and Coalesce("Age" < 40, true) and not "Neck Stiffness"
+      and not "Was Answered"([Observation: "Onset on exertion"]) then 'onset-exertion' else null,
+    if "Ottawa Possible" and "Pain Now" is null then 'pain-score' else null
+  }) Q where Q is not null
+
+// The rest can raise the level to Emergency, or decide between Reassure and Urgent (the pain score).
+// Positional, Valsalva, progressive and vomiting count only with a new or changed headache, which is
+// already Urgent, so they can never change the level and are never needed.
+define "Other Questions Needed":
+  if "CO Exposure" or "Red Flag" or "Emergency Flag" then List<System.String>{}
+  else (List<System.String> {
+    if not "Urgent Flag" and "Pain Now" is null then 'pain-score' else null,
+    if not "Was Answered"([Observation: "Head trauma"]) then 'head-trauma' else null,
+    if "Fever" and not "Was Answered"([Observation: "Worsening"]) then 'worsening' else null,
+    if "Age" >= 50 and "New Or Changed Pain" and not "Was Answered"([Observation: "GCA features"]) then 'gca-features' else null
+  }) Q where Q is not null
+
+define "Questions Needed":
+  if not "Applies" then null
+  else flatten { "ED Questions Needed", "Other Questions Needed" }
+
 define "ED Questions Answered":
-  "Was Answered"([Observation: "CO exposure"])
-    and "Was Answered"([Observation: "Onset to peak"])
-    and "Was Answered"([Observation: "Onset on exertion"])
-    and "Was Answered"([Observation: "Similarity"])
-    and "Was Answered"([Observation: "Neuro deficit"])
-    and "Was Answered"([Observation: "Altered consciousness"])
-    and "Was Answered"([Observation: "Fever question"])
-    and "Was Answered"([Observation: "Neck stiffness"])
-    and "Was Answered"([Observation: "Eye pain or vision"])
-    and (if "Onset Peak" ~ "5 to 60 min" and "New Or Changed Pain" then "Pain Now" is not null else true)
+  not exists "ED Questions Needed"
 
 define "Other Questions Answered":
-  "Was Answered"([Observation: "Worsening"])
-    and "Was Answered"([Observation: "Head trauma"])
-    and "Was Answered"([Observation: "Positional question"])
-    and "Was Answered"([Observation: "Valsalva or exertion"])
-    and "Was Answered"([Observation: "Progressive question"])
-    and "Was Answered"([Observation: "Vomiting"])
-    and (if "Age" >= 50 then "Was Answered"([Observation: "GCA features"]) else true)
+  not exists "Other Questions Needed"
 
 define "Ask Headache Screen":
   if not "Applies" then null
-  else not ("ED Questions Answered" and "Other Questions Answered")
+  else exists "Questions Needed"
 
 define "Ask Pain Score":
   if not "Applies" then null

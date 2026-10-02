@@ -15,7 +15,8 @@ Two clinical rules — an adult [headache triage protocol](docs/headache-triage-
 **What I did**
 
 - Wrote two clinical modules and a shared pattern library in CQL: time windows, trusted data sources, latest value, upward-only escalation, explicit handling of missing data (“No” is a fact; a question without a value is not an answer).
-- Turned an evidence-based headache triage protocol (NICE CG150, SNNOOP10, Ottawa SAH Rule, StatPearls) into a CQL module: red flags → ED, orange flags → Emergency or Urgent, ED-level questions asked first, every fired flag returned for the alert text, and 21 tests for every branch and boundary (age 39/40 and 49/50, pain 7/8, head injury 90/91 days).
+- Turned an evidence-based headache triage protocol (NICE CG150, SNNOOP10, Ottawa SAH Rule, StatPearls) into a CQL module: red flags → ED, orange flags → Emergency or Urgent, ED-level questions asked first, every fired flag returned for the alert text, and 25 tests for every branch and boundary (age 39/40 and 49/50, pain 7/8, head injury 90/91 days).
+- Made the questioning adaptive inside the rule itself: CQL returns the questions whose answer can still change the level, so the chat never asks one that cannot change the advice (a headache like the usual ones takes 10 questions instead of 16).
 - Modelled the patient background in FHIR (`Patient.birthDate` plus profile Observations) and made it editable in the page both as a form and as raw JSON.
 - Mapped patient facts to FHIR `Observation`s with LOINC and SNOMED CT codes and UCUM units, including coded PHQ-9 answers.
 - Built a test harness: test patients are plain JSON (facts + expected results), so clinical analysts can add cases without writing code.
@@ -28,7 +29,7 @@ Two clinical rules — an adult [headache triage protocol](docs/headache-triage-
 
 The page has three tabs:
 
-- **Patient chat.** Answer with buttons as a patient: a headache screen, or the PHQ-9 and GAD-7 questionnaires (answer them yourself or pick a ready-made example). Next to the chat you see the **input** — which facts, with which codes, the engine received (also as raw FHIR) — and the **output**: the decision in plain language, the escalation level, the flags that fired with their evidence, the depression and anxiety scores and the value of every rule step. The headache screen re-runs the engine after every answer: the output is live, an orange flag alerts the care team before the screen is finished, and a red flag stops the questions at once. Skipped questions can be answered at the end. The decision message lights up the rippling hexagon background in its escalation colour. “Save as a test scenario” turns a conversation into a test patient. Hover over any button to see what it does.
+- **Patient chat.** Answer with buttons as a patient: a headache screen, or the PHQ-9 and GAD-7 questionnaires (answer them yourself or pick a ready-made example). Next to the chat you see the **input** — which facts, with which codes, the engine received (also as raw FHIR) — and the **output**: the decision in plain language, the escalation level, the flags that fired with their evidence, the depression and anxiety scores and the value of every rule step. The headache screen re-runs the engine after every answer: the output is live, the rule picks the next question and skips those that can no longer change the advice, an orange flag alerts the care team before the screen is finished, and the questions stop as soon as the answer is clear. Skipped questions can be answered at the end. The decision message lights up the rippling hexagon background in its escalation colour. “Save as a test scenario” turns a conversation into a test patient. Hover over any button to see what it does.
 - **Patient background.** Who you are playing: name, sex, age (18 or older) and medical history (pregnancy, a weakened immune system, cancer history). The form and an editable FHIR Bundle are the same data; hand edits are validated before use, and any extra FHIR resource is passed to the engine as is.
 - **Rules & tests.** An editor for the rules, the code vocabulary and the test patients (picked from a list grouped by rule), a “Compile & run” button, a trace of every step and three 10-minute exercises: add a test patient, change a threshold and see what breaks, make a typo and get a precise error. Rule changes apply to the chat right away.
 
@@ -37,7 +38,7 @@ The page has three tabs:
 | Level | Headache triage | Mood screening | What the patient is told | Chat colour |
 |---|---|---|---|---|
 | No escalation required | Full screen, no flags, pain 0–7 | PHQ-9 < 10 and GAD-7 < 10 | No warning signs (and when to seek help again) | green |
-| Urgent escalation | A new or different headache, worse with posture or coughing, worse day by day; pain 8–10 | PHQ-9 10–19 or GAD-7 ≥ 10 | We recommend talking to your doctor | yellow |
+| Urgent escalation | A new or different headache (worse with posture or coughing, or worse day by day, adds detail to the alert); pain 8–10 | PHQ-9 10–19 or GAD-7 ≥ 10 | We recommend talking to your doctor | yellow |
 | Emergency escalation | Head injury in the last 3 months, fever with a worsening headache, a new headache with pregnancy or a weak immune system, giant cell arteritis signs at 50+ | PHQ-9 ≥ 20 | A doctor needs to see you | orange |
 | ED escalation | Thunderclap onset, a neurological deficit, confusion, fever with a stiff neck, the Ottawa SAH Rule, a painful red eye; suspected carbon monoxide (leave the area first) | Any thoughts of self-harm (PHQ-9 item 9) | Seek emergency care / help urgently | red |
 
@@ -56,8 +57,9 @@ Missing answers never become “no escalation”: the level stays unknown and th
 
 **Result.**
 
-- 2 clinical modules, 1 pattern library, 27 test scenarios (plus any saved from the chat), all green in CI on three Node.js versions.
+- 2 clinical modules, 1 pattern library, 31 test scenarios (plus any saved from the chat), all green in CI on three Node.js versions.
 - A guideline-based protocol (the headache screen) went from a document to executable rules with a test for every branch and boundary; the clinical owner's open questions are listed next to the evidence.
+- The question tree lives in the rule, not in the page: which questions are asked is tested like any other output (`Questions Needed` in scenarios h16, h17, h22–h25).
 - A zero-install demo published automatically to GitHub Pages; the compiler and engine run in the visitor's browser.
 - Compile errors point to `file:line:column`; three-valued logic keeps missing data unknown instead of “false”; units are compared with UCUM conversion (for example, °F against a threshold in °C).
 
@@ -129,15 +131,15 @@ PASS  h21-latest-pain-score.json  [HeadacheTriage] Two pain scores, 9 earlier an
         New Or Changed Pain      = false
         ...
         Severe Pain              = false
-        ED Questions Answered    = true
-        Other Questions Answered = true
+        ...
+        Questions Needed         = []
         Ask Headache Screen      = false
       ✓ Proposed Level           = No escalation required
         New Level                = null
       ✓ Disposition              = Reassure
       ✓ Fired Flags              = []
 ...
-27 / 27 PASS
+31 / 31 PASS
 ```
 
 ✓ marks a step the scenario's `expect` checks; ✗ marks one that did not match. `null` means “no value”: the rule never silently turns it into `false`.

@@ -818,7 +818,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
           <li>Press “Compile &amp; run”.</li>
         </ol>
         <p class="expect">Expected: <code data-expect="ex1">all passed</code>. This is how a UAT scenario is added: just facts and expectations.</p>
-        <div class="row"><button class="btn small" type="button" data-ex="1" data-tip="Adds a test patient whose headache gets worse with coughing (Urgent escalation) and runs every check.">Add and run</button></div>
+        <div class="row"><button class="btn small" type="button" data-ex="1" data-tip="Adds a test patient whose headache is different from the usual ones (Urgent escalation) and runs every check.">Add and run</button></div>
       </article>
       <article class="ex">
         <span class="num">EXERCISE 2</span>
@@ -870,12 +870,12 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
 
   const NOTES = {
     "MoodScreening.cql": "Clinical module: depression (PHQ-9) and anxiety (GAD-7) screening. PHQ-9 item 9 is checked separately from the total score.",
-    "HeadacheTriage.cql": "Clinical module: adult headache triage (NICE CG150, SNNOOP10, Ottawa SAH Rule). Red flags → ED, orange flags → Emergency or Urgent; the pain score counts only when no flag fired.",
+    "HeadacheTriage.cql": "Clinical module: adult headache triage (NICE CG150, SNNOOP10, Ottawa SAH Rule). Red flags → ED, orange flags → Emergency or Urgent; the pain score counts only when no flag fired. It also lists the questions still worth asking (Questions Needed).",
     "RulePatterns.cql": "Pattern library: the building blocks every rule reuses — time window, trusted sources, latest value, upward-only escalation.",
     "FHIRHelpers.cql": "Standard HL7 helper library. No need to change it.",
     "vocabulary.json": "ValueSets: set address → codes, e.g. the answers that make a headache “new”.",
   };
-  const EXERCISE_FILE = "scenarios/h22-cough-makes-it-worse.json";
+  const EXERCISE_FILE = "scenarios/h30-different-from-usual.json";
 
   // ---------- file model ----------
   const original = {};
@@ -906,10 +906,10 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     let s;
     try { s = JSON.parse(original["scenarios/h01-baseline.json"]); } catch (e) { s = null; }
     if (!s || !Array.isArray(s.facts)) return { name: "New test patient", rule: MAIN, now: new Date().toISOString(), facts: [], expect: {} };
-    s.name = "Coughing makes the headache worse -> urgent escalation, provider notification";
-    const fact = s.facts.find(f => f.code === "valsalva-exertion");
-    if (fact) fact.answer = "Yes";
-    s.expect = { "Fired Flags": ["valsalva-exertion"], "Proposed Level": "Urgent escalation", "Disposition": "Provider notification" };
+    s.name = "Different from the usual headaches -> urgent escalation, provider notification";
+    const fact = s.facts.find(f => f.code === "similarity");
+    if (fact) fact.answer = "different";
+    s.expect = { "Fired Flags": ["new-or-changed"], "Proposed Level": "Urgent escalation", "Disposition": "Provider notification" };
     return s;
   }
 
@@ -1598,7 +1598,6 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     return defaultBackground();
   })();
   const saveBackground = () => { try { localStorage.setItem(BG_KEY, JSON.stringify(background)); } catch (e) { /* ignore */ } };
-  const backgroundAge = () => ageFrom(patientOf(background).birthDate);
 
   // A copy for one engine run: the Patient goes to scenario.patient, everything else to scenario.resources
   function backgroundForEngine() {
@@ -1987,14 +1986,16 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   // The engine outputs shown up front and saved as expectations; the rest stays in the full trace
   const KEY_OUTPUTS = {
     MoodScreening: ["PHQ-9 Score", "PHQ-9 Severity", "GAD-7 Score", "GAD-7 Severity", "Self-harm Thoughts", "Proposed Level", "New Level", "Disposition"],
-    HeadacheTriage: ["Age", "Pain Now", "Fired Flags", "Ask Headache Screen", "Proposed Level", "New Level", "Disposition"],
+    HeadacheTriage: ["Age", "Pain Now", "Fired Flags", "Questions Needed", "Proposed Level", "New Level", "Disposition"],
   };
   const LEVEL_CLS = { "ED escalation": "ed", "Emergency escalation": "emergency", "Urgent escalation": "urgent", "No escalation required": "none" };
   // Dispositions after which the chat stops asking: one answer was enough
   const STOP = new Set(["Leave area and seek emergency care", "Emergency Department evaluation"]);
 
-  // The headache screen in the protocol's order: ED-level questions first, then the pain score, then the rest
+  // The headache screen questions, in the order the rule lists them. The rule decides which are asked:
+  // its "Questions Needed" output names only those whose answer can still change the level.
   const NEW_PAIN_TIP = "A new or different headache: an orange flag (Urgent escalation). It also turns on the flags that need a new headache.";
+  const NEW_PAIN_ONLY = "Counted only with a new or different headache, which is already Urgent escalation: it adds detail to the alert, so the rule does not ask it.";
   const HQ = [
     { code: "co-exposure", short: "Others unwell nearby, or a fuel-burning appliance", text: "Does anyone around you have similar symptoms? Is a generator, gas heater or stove running indoors where you are?", yes: "Possible carbon monoxide: ED escalation, and the first advice is to leave the area." },
     { code: "onset-peak", short: "Time from onset to the worst pain", text: "How quickly did the headache reach its worst?", options: [
@@ -2002,9 +2003,8 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
       { label: "In 5 to 60 minutes", value: "5-to-60-min", tip: "With a new headache and pain of 7 or more, the Ottawa SAH Rule is checked." },
       { label: "Over more than an hour", value: "over-60-min", tip: "A gradual onset: no flag by itself." },
     ] },
-    { code: "onset-exertion", short: "Started during physical effort", text: "Did it start during physical effort, such as exercise, lifting or straining?", yes: "One of the Ottawa SAH Rule criteria: it counts with a new, severe headache that peaked within an hour." },
     { code: "similarity", short: "Compared with usual headaches", text: "Is this headache like the headaches you usually get?", options: [
-      { label: "Like my usual ones", value: "usual", tip: "A familiar headache: no flag by itself." },
+      { label: "Like my usual ones", value: "usual", tip: "A familiar headache: no flag by itself, and the screen gets shorter." },
       { label: "Different from usual", value: "different", tip: NEW_PAIN_TIP },
       { label: "My first headache like this", value: "first-ever", tip: NEW_PAIN_TIP },
     ] },
@@ -2013,21 +2013,22 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     { code: "fever", short: "Fever", text: "Do you have a fever?", yes: "With neck pain or stiffness: ED escalation. With a headache that is getting worse: Emergency escalation." },
     { code: "neck-stiffness", short: "Neck pain or stiffness", text: "Is your neck painful or stiff, so that it is hard to bend your head forward?", yes: "With fever: a red flag (possible meningitis). It is also an Ottawa SAH Rule criterion." },
     { code: "eye-pain-vision", short: "Eye pain or vision changes", text: "Is an eye painful or red? Has your vision become blurred, or do you see rainbow-coloured rings around lights?", yes: "A red flag (possible acute glaucoma): ED escalation." },
-    { kind: "pain", short: "Pain now, 0–10", text: "How bad is the headache right now, from 0 (no pain) to 10 (the worst pain you can imagine)?" },
-    { code: "worsening", short: "Getting worse over the last hours", text: "Is the headache getting worse over the last few hours?", yes: "With fever: Emergency escalation." },
+    { code: "onset-exertion", short: "Started during physical effort", text: "Did it start during physical effort, such as exercise, lifting or straining?", yes: "One of the Ottawa SAH Rule criteria: it counts with a new, severe headache that peaked within an hour." },
+    { code: "pain-score", kind: "pain", short: "Pain now, 0–10", text: "How bad is the headache right now, from 0 (no pain) to 10 (the worst pain you can imagine)?" },
     { code: "head-trauma", short: "Recent head injury", text: "Have you hit your head recently?", options: [
       { label: "No", value: "No", tip: "Recorded as “No”: a real answer." },
       { label: "Yes, in the last 4 weeks", value: { daysAgo: 14 }, tip: "Recorded as the date of the injury, about 2 weeks ago: within 3 months, so Emergency escalation." },
       { label: "Yes, 1–3 months ago", value: { daysAgo: 60 }, tip: "Recorded as a date about 2 months ago: within the 90-day window, so Emergency escalation." },
       { label: "Yes, more than 3 months ago", value: { daysAgo: 120 }, tip: "Recorded as a date about 4 months ago: outside the 90-day window, so no flag." },
     ] },
-    { code: "positional", short: "Changes when lying down or standing up", text: "Does the headache change when you lie down or stand up?", yes: "An orange flag: Urgent escalation." },
-    { code: "valsalva-exertion", short: "Triggered by coughing, straining or effort", text: "Does the headache start or get worse when you cough, sneeze, strain or exert yourself?", yes: "An orange flag: Urgent escalation." },
-    { code: "progressive", short: "Getting worse from day to day", text: "Has the headache been getting worse from day to day?", yes: "An orange flag: Urgent escalation." },
-    { code: "vomiting", short: "Vomiting", text: "Have you vomited?", yes: "With a new or different headache: Urgent escalation." },
-    { code: "gca-features", short: "Jaw pain when chewing, or a tender scalp", text: "Does your jaw hurt when you chew? Is your scalp sore to the touch?", yes: "At 50 or older with a new headache: possible giant cell arteritis, Emergency escalation.", minAge: 50 },
+    { code: "worsening", short: "Getting worse over the last hours", text: "You said you have a fever. Is the headache getting worse over the last few hours?", yes: "Fever with a worsening headache: Emergency escalation." },
+    { code: "gca-features", short: "Jaw pain when chewing, or a tender scalp", text: "Does your jaw hurt when you chew? Is your scalp sore to the touch?", yes: "At 50 or older with a new headache: possible giant cell arteritis, Emergency escalation." },
+    { code: "positional", short: "Changes when lying down or standing up", text: "Does the headache change when you lie down or stand up?", yes: NEW_PAIN_ONLY },
+    { code: "valsalva-exertion", short: "Triggered by coughing, straining or effort", text: "Does the headache start or get worse when you cough, sneeze, strain or exert yourself?", yes: NEW_PAIN_ONLY },
+    { code: "progressive", short: "Getting worse from day to day", text: "Has the headache been getting worse from day to day?", yes: NEW_PAIN_ONLY },
+    { code: "vomiting", short: "Vomiting", text: "Have you vomited?", yes: NEW_PAIN_ONLY },
   ];
-  const HQ_BY_CODE = Object.fromEntries(HQ.filter(q => q.code).map(q => [q.code, q]));
+  const HQ_BY_CODE = Object.fromEntries(HQ.map(q => [q.code, q]));
 
   // The flags the rule can fire ("Fired Flags"), in words, with the evidence behind each
   const FLAGS = {
@@ -2136,7 +2137,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
       const topic = await ask(
         `Hi! This is a demo chat: you answer as a patient, and the Input and Output panels show what data the rule engine received and what it decided.\nYou are playing ${nameOf(p) || "the patient"}, ${ageFrom(p.birthDate)}. Click the name above to change the age or medical background.\nWhat shall we check?`,
         [
-          { label: "Headache", value: "headache", cls: "primary", tip: "Runs HeadacheTriage: an adult headache screen based on NICE CG150, SNNOOP10 and the Ottawa SAH Rule. It also reads the patient background." },
+          { label: "Headache", value: "headache", cls: "primary", tip: "Runs HeadacheTriage: an adult headache screen based on NICE CG150, SNNOOP10 and the Ottawa SAH Rule. The rule picks each next question and reads the patient background." },
           { label: "Mood and anxiety", value: "mood", tip: "Runs the MoodScreening rule: the PHQ-9 depression and GAD-7 anxiety questionnaires." },
         ],
       );
@@ -2186,10 +2187,6 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   }
 
   // ---------- the headache screen ----------
-  const applicableQuestions = () => HQ.filter(q => !q.minAge || (backgroundAge() ?? 0) >= q.minAge);
-  const isAnswered = (chat, q) => chat.facts.some(f => (q.kind === "pain"
-    ? f.kind === "pain" && f.value != null
-    : f.kind === "headache-screen" && f.code === q.code && (f.answer != null || f.date != null)));
   const NOT_SURE = { label: "Not sure", value: null, cls: "muted", tip: "Recorded as a question without an answer. The rule treats it as unknown, not as “no”, and asks for it again." };
 
   function optionsFor(q) {
@@ -2220,35 +2217,42 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   }
 
   async function headacheFlow(my) {
-    const chat = { rule: "HeadacheTriage", facts: [], sentLevel: null };
+    const chat = { rule: "HeadacheTriage", facts: [], sentLevel: null, asked: 0 };
     const has = await ask("Do you have a headache right now?", [
-      { label: "Yes", value: "Yes", tip: "Start the headache screen: up to 17 short questions, the most important first." },
+      { label: "Yes", value: "Yes", tip: "Start the headache screen: about ten short questions, the most important first." },
       { label: "No", value: "No", tip: "Recorded as “No”. The protocol applies only to a headache now, so the engine will say it does not apply." },
     ]);
     if (my !== chatSession) return;
     chat.facts.push({ kind: "headache", answer: has, at: new Date().toISOString(), source: "Patient" });
     if (!(await step(my, chat, true))) return;
     if (has === "Yes") {
-      say("I will ask a few short questions, the most important first, and stop as soon as one answer is enough to advise you. The Output panel shows the engine's decision after every answer.");
-      await screen(my, chat, applicableQuestions());
+      say("I will ask a few short questions, the most important first. After each answer the rule picks the next question and skips those that can no longer change the advice, so I stop as soon as the answer is clear. The Output panel shows the engine's decision after every answer.");
+      await screen(my, chat);
     } else {
       await conclude(my, chat);
     }
   }
 
-  async function screen(my, chat, list) {
-    for (let i = 0; i < list.length; i++) {
-      const q = list[i];
-      progress(i + 1, list.length);
-      const value = await ask(q.text, optionsFor(q), `Headache screen · ${i + 1} of ${list.length}`);
+  // The questions the rule still needs, in its order, that this pass has not asked yet.
+  // "Not sure" leaves a question needed, so each pass asks it once; the skipped ones get their own pass.
+  const neededNow = (chat, asked) => listOf(chat.last.out["Questions Needed"]).filter(code => HQ_BY_CODE[code] && !asked.has(code));
+
+  async function screen(my, chat) {
+    const asked = new Set();
+    for (let needed = neededNow(chat, asked); needed.length && !STOP.has(chat.last.out.Disposition); needed = neededNow(chat, asked)) {
+      const q = HQ_BY_CODE[needed[0]];
+      asked.add(q.code);
+      chat.asked += 1;
+      const total = chat.asked + needed.length - 1;
+      progress(chat.asked, total);
+      const value = await ask(q.text, optionsFor(q), `Headache screen · ${chat.asked} of ${total}`);
       if (my !== chatSession) return;
       chat.facts.push(factFor(q, value));
       if (!(await step(my, chat, true))) return;
-      if (STOP.has(chat.last.out.Disposition)) {
-        if (i < list.length - 1) say("I am stopping the questions here: this answer is enough to advise you.");
-        break;
-      }
     }
+    const level = chat.last.out["Proposed Level"];
+    if (STOP.has(chat.last.out.Disposition)) say("I am stopping the questions here: this answer is enough to advise you.");
+    else if (level === "Emergency escalation" && !neededNow(chat, new Set()).length) say("Your answers already show that a doctor needs to see you, so the remaining questions would not change the advice. I will not ask them.");
     await conclude(my, chat);
   }
 
@@ -2323,15 +2327,14 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     decision.classList.add("decision", r.verdict.cls);
     waves.light(decision, r.verdict.cls);
 
-    const missing = chat.rule === "HeadacheTriage" && r.out.Applies === "true" && !STOP.has(r.out.Disposition)
-      ? applicableQuestions().filter(q => !isAnswered(chat, q)) : [];
+    const missing = chat.rule === "HeadacheTriage" && !STOP.has(r.out.Disposition) ? neededNow(chat, new Set()) : [];
     const asking = /^Ask/.test(r.out.Disposition || "");
     const options = [];
     if (missing.length) {
       options.push({
         label: missing.length === 1 ? "Answer the skipped question" : `Answer the ${missing.length} skipped questions`,
         value: "missing", cls: asking ? "primary" : undefined, silent: true,
-        tip: "Ask again only the questions that have no answer yet. The engine re-runs after each one.",
+        tip: "Ask again only the questions the rule still needs. The engine re-runs after each one.",
       });
     }
     options.push({ label: "Start over", value: "restart", cls: missing.length && asking ? undefined : "primary", silent: true, tip: TIP_RESTART });
@@ -2481,7 +2484,10 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   function renderOutput(rule, r, live) {
     const { scenario, out, trace, verdict } = r;
     const parts = [];
-    if (live) parts.push(el("p", "live", `Live: the engine re-runs after every answer (${scenario.facts.length} so far).`));
+    if (live) {
+      const needed = listOf(out["Questions Needed"]).length;
+      parts.push(el("p", "live", `Live: the engine re-runs after every answer (${scenario.facts.length} so far)${rule === "HeadacheTriage" && out.Applies === "true" ? `; the rule still needs ${needed} question${needed === 1 ? "" : "s"}` : ""}.`));
+    }
     const card = el("div", "verdict " + verdict.cls);
     if (out["Proposed Level"]) card.append(el("span", "level", out["Proposed Level"]));
     card.append(el("h3", null, verdict.title), el("p", null, verdict.text));
