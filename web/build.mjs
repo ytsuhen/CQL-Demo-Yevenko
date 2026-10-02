@@ -2,6 +2,7 @@
 //
 //   dist/engine.js  — engine.mjs with the translator and the engine in one file (window.DemoEngine)
 //   dist/index.html — web/index.html with the current cql/*.cql, vocabulary.json and scenarios/*.json embedded
+//   dist/receipt.html — web/receipt.html as is: shows a decision receipt carried in the link after "#"
 //
 // So the web version always shows the same rules and scenarios as `npm test`.
 
@@ -70,6 +71,8 @@ const page = fs.readFileSync(path.join(ROOT, "web", "index.html"), "utf8");
 if (!page.includes("/*SEED*/")) throw new Error("web/index.html: no /*SEED*/ placeholder to fill");
 fs.writeFileSync(path.join(DIST, "index.html"), page.replace("/*SEED*/", () => seedJson));
 fs.writeFileSync(path.join(DIST, ".nojekyll"), "");
+// The decision receipt page: a QR code in a presentation opens a receipt here, carried entirely in the link
+fs.copyFileSync(path.join(ROOT, "web", "receipt.html"), path.join(DIST, "receipt.html"));
 
 const kb = f => Math.round(fs.statSync(path.join(DIST, f)).size / 1024);
 console.log(`dist/index.html  ${kb("index.html")} KB  (${Object.keys(sources).length} libraries, ${Object.keys(seed.scenarios).length} scenarios)`);
