@@ -65,6 +65,19 @@ main { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap
 .rcpt-flag { font-size: 0.84em; color: var(--paper-dim); }
 .rcpt-bars { display: flex; justify-content: center; gap: 2px; height: 26px; margin-top: 10px; }
 .rcpt-bars i { display: block; height: 100%; background: var(--paper-ink); }
+.rcpt-run { display: grid; grid-template-columns: 5.4em auto minmax(0, 1fr); gap: 6px; align-items: baseline; margin-top: 8px; font-size: 0.9em; font-weight: 700; }
+.rcpt-run time { color: var(--paper-dim); font-weight: 500; font-size: 0.92em; }
+.rcpt-defs { display: flex; flex-direction: column; gap: 1px; margin: 3px 0 0 6.2em; font-size: 0.86em; line-height: 1.3; }
+.rcpt-defs div { display: grid; grid-template-columns: auto minmax(10px, 1fr) auto; gap: 6px; align-items: baseline; }
+.rcpt-defs i { border-bottom: 1.5px dotted var(--paper-rule); transform: translateY(-4px); }
+.rcpt-defs b { font-weight: 600; text-align: right; }
+.rcpt-defs .v-true { font-weight: 800; }
+.rcpt-defs .v-alarm { color: #A12A2A; font-weight: 800; }
+.rcpt-run b { white-space: nowrap; }
+.rcpt-defs .v-false { color: var(--paper-dim); }
+.rcpt-defs .v-null { color: var(--paper-dim); font-style: italic; font-weight: 500; }
+.rcpt-defs .v-key { font-weight: 800; }
+.rcpt-engine > .rcpt-small:last-child { margin-top: 8px; }
 .rcpt .lvl-ed { --lvl: #F06262; }
 .rcpt .lvl-emergency { --lvl: #F59E3B; }
 .rcpt .lvl-urgent { --lvl: #F2D04B; }
@@ -135,6 +148,9 @@ main { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap
     e: ["EHR", () => "FHIR Communication + Flag"],
   };
 
+  // The rule's own steps (CQL defines) the engine view can show, by position in the link
+  const DEFINES = ["Applies", "Age", "Onset Peak", "CO Exposure", "Thunderclap", "Red Flag", "Fired Flags", "Questions Needed", "Proposed Level", "New Level", "Disposition", "Pain Now"];
+
   function b64url(bytes) {
     let bin = "";
     for (const b of bytes) bin += String.fromCharCode(b);
@@ -168,7 +184,7 @@ main { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap
   // Positional, short and deflated ("z" + base64url), so the QR code stays easy to scan across a room.
   // Events: [seconds after the start, kind, value]; kinds: i received, u understood, a asked, d decided, o sent.
   async function encode(r) {
-    const json = JSON.stringify([2, r.id.replace(/-/g, ""), r.date, r.start, r.rule, r.age, codeOf(LEVELS, r.level), codeOf(DISPOSITIONS, r.disposition), r.flags, r.events]);
+    const json = JSON.stringify([3, r.id.replace(/-/g, ""), r.date, r.start, r.rule, r.age, codeOf(LEVELS, r.level), codeOf(DISPOSITIONS, r.disposition), r.flags, r.events, r.hash || "", r.runs || []]);
     const bytes = new TextEncoder().encode(json);
     if (typeof CompressionStream === "function") return "z" + b64url(await pipe(bytes, new CompressionStream("deflate-raw")));
     return "j" + b64url(bytes);
@@ -181,8 +197,8 @@ main { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap
       bytes = await pipe(bytes, new DecompressionStream("deflate-raw"));
     } else if (kind !== "j") throw new Error("Unknown trace format");
     const a = JSON.parse(new TextDecoder().decode(bytes));
-    if (!Array.isArray(a) || a[0] !== 2) throw new Error("Unknown trace format");
-    const [, id, date, start, rule, age, level, disposition, flags, events] = a;
+    if (!Array.isArray(a) || a[0] !== 3) throw new Error("Unknown trace format");
+    const [, id, date, start, rule, age, level, disposition, flags, events, hash, runs] = a;
     return {
       id: String(id).replace(/(.{4})(.{4})(.{4})/, "$1-$2-$3"),
       date, start, rule, age,
@@ -192,6 +208,8 @@ main { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap
       disposition: (DISPOSITIONS[disposition] || [disposition])[0],
       flags: flags || [],
       events: events || [],
+      hash: hash || "",
+      runs: runs || [],
     };
   }
 
@@ -205,6 +223,16 @@ main { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap
     const [k, a] = String(v).split("=");
     return a == null ? v : `${k} = ${ANSWERS[a] || a}`;
   };
+  function showValue(name, v) {
+    const s = String(v);
+    if (s === "null") return { text: "null · unknown", cls: "v-null" };
+    if (s === "true") return { text: "true", cls: name === "Thunderclap" || name === "Red Flag" ? "v-alarm" : "v-true" };
+    if (s === "false") return { text: "false", cls: "v-false" };
+    if (name === "Questions Needed") return { text: s === "0" ? "none left" : `${s} left`, cls: null };
+    if (name === "Disposition") return { text: (DISPOSITIONS[s] || [s])[0], cls: "v-key" };
+    if (name === "Proposed Level" || name === "New Level") return { text: LEVELS[s] || s, cls: "v-key" };
+    return { text: ANSWERS[s] || s, cls: null };
+  }
   function el(doc, tag, cls, text) {
     const e = doc.createElement(tag);
     if (cls) e.className = cls;
@@ -247,6 +275,28 @@ main { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap
       } else if (kind === "d") { decidedAt = at; skipped = Number(value) || 0; }
     }
     paper.append(el(doc, "p", "rcpt-head", "Received · understood · asked"), flow);
+    if (r.runs.length) {
+      cut();
+      const view = el(doc, "div", "rcpt-engine");
+      view.append(el(doc, "p", "rcpt-head", "Engine view · how the rule saw it"));
+      view.append(el(doc, "p", "rcpt-small", `${r.rule} · compiled rule (ELM) ${r.hash || "unknown"} · one run after every answer`));
+      const facts = r.events.filter(e => e[1] === "u");
+      r.runs.forEach(([at, defs], i) => {
+        const head = el(doc, "div", "rcpt-run");
+        head.append(el(doc, "time", null, clock(r.start, at)), el(doc, "b", "t-cql", `RUN ${i + 1}`), el(doc, "span", null, `+ ${said(facts[i] ? facts[i][2] : "")}`));
+        view.append(head);
+        const list = el(doc, "div", "rcpt-defs");
+        for (const [k, v] of defs) {
+          const row = el(doc, "div");
+          const shown = showValue(DEFINES[k], v);
+          row.append(el(doc, "span", null, DEFINES[k] || String(k)), el(doc, "i"), el(doc, "b", shown.cls, shown.text));
+          list.append(row);
+        }
+        view.append(list);
+      });
+      view.append(el(doc, "p", "rcpt-small", "null = unknown: never read as “no”. Unchanged steps are not repeated."));
+      paper.append(view);
+    }
     const dec = el(doc, "div", "rcpt-decision lvl-" + r.levelClass);
     const top = el(doc, "div", "rcpt-dtop");
     top.append(el(doc, "time", null, decidedAt == null ? "" : clock(r.start, decidedAt)), el(doc, "b", "t-cql", "CQL"), el(doc, "strong", null, r.level));
@@ -279,7 +329,7 @@ main { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap
     box.append(paper);
   }
 
-  root.Receipt = { LEVELS, DISPOSITIONS, QUESTIONS, WHY, encode, decode, render, decisionId, clock };
+  root.Receipt = { LEVELS, DISPOSITIONS, QUESTIONS, WHY, DEFINES, encode, decode, render, decisionId, clock };
 })(typeof window !== "undefined" ? window : globalThis);
 
 </script>
