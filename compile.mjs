@@ -14,7 +14,7 @@ export const ELM_DIR = path.join(ROOT, "elm");
 
 export { compile };
 
-/** Reads every cql/*.cql: { "SymptomTriage": "<text>", … } */
+/** Reads every cql/*.cql: { "HeadacheTriage": "<text>", … } */
 export function readSources(dir = CQL_DIR) {
   const sources = {};
   for (const f of fs.readdirSync(dir).filter(f => f.endsWith(".cql")).sort()) {

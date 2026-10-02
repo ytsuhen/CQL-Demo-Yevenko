@@ -2,7 +2,7 @@
 
 Andrii Yevenko · October 2026 · based on NCBI sources (PubMed, PMC, Bookshelf) and NICE CG150
 
-Implemented in [`cql/HeadacheTriage.cql`](../cql/HeadacheTriage.cql) and checked by test scenarios `h01`–`h20` in [`scenarios/`](../scenarios/). The escalation levels are illustrative: this demonstrates an approach, not a clinical recommendation.
+Implemented in [`cql/HeadacheTriage.cql`](../cql/HeadacheTriage.cql) and checked by test scenarios `h01`–`h21` in [`scenarios/`](../scenarios/). The escalation levels are illustrative: this demonstrates an approach, not a clinical recommendation.
 
 ## Purpose and scope
 
@@ -15,7 +15,7 @@ The protocol assigns a patient's headache report to one of the engine's levels (
 
 ## Levels and branch priority
 
-Branches are checked top-down and the first true one wins, as in SymptomTriage. Any positive flag outranks both an incomplete screen and the pain score.
+Branches are checked top-down and the first true one wins. Any positive flag outranks both an incomplete screen and the pain score.
 
 | Order | What fired | Proposed Level | Disposition | Response (proposed) |
 |---|---|---|---|---|
@@ -74,12 +74,12 @@ The pain score affects the decision only when the screen is complete and no flag
 
 **Required questions.** ED-level: `co-exposure`, `onset-peak`, `onset-exertion`, `similarity`, `neuro-deficit`, `altered-consciousness`, `fever`, `neck-stiffness`, `eye-pain-vision`, plus the pain score when the pain is new and peaked within an hour (the Ottawa branch). The rest: `worsening`, `head-trauma`, `positional`, `valsalva-exertion`, `progressive`, `vomiting`; at age ≥ 50 also `gca-features`.
 
-- **“No” is a fact.** Each question is recorded as its own Observation with a yes/no answer. A flag fires only on “Yes”, and a question counts as answered only when it has a value. This closes two gaps found in SymptomTriage: an Observation without a value is not an answer, and a symptom answered “No” does not escalate.
+- **“No” is a fact.** Each question is recorded as its own Observation with a yes/no answer. A flag fires only on “Yes”, and a question counts as answered only when it has a value. This closes two gaps of a plain “symptom present” model: an Observation without a value is not an answer, and a symptom answered “No” does not escalate.
 - **“Prefer not to answer”** (“Not sure” in the chat) means no answer.
 - **Ask Headache Screen** = true when at least one required question has no answer in the window. **Ask Pain Score** = true when there is no pain score in the window.
 - **Proposed Level** = null only when no flag fired and an answer is missing. A positive flag does not wait for the screen to finish.
 
-One difference from SymptomTriage: there, a missing pain score cannot raise the level above a red flag; here, unanswered questions can still reveal ED. So the ED-level questions come first, and while any of them is unanswered, Disposition = Ask headache screen, even if New Level has already sent the care team an Emergency or Urgent alert.
+Unlike a rule where only a pain score can be missing (and a missing score can never outrank a red flag), here unanswered questions can still reveal ED. So the ED-level questions come first, and while any of them is unanswered, Disposition = Ask headache screen, even if New Level has already sent the care team an Emergency or Urgent alert.
 
 ## Patient texts for the Disposition
 
@@ -97,30 +97,31 @@ The text for “Ask headache screen” deliberately includes a short ED reminder
 
 ## How it maps to the engine
 
-The rule is `cql/HeadacheTriage.cql`; it includes `RulePatterns` and has the same output contract as SymptomTriage.
+The rule is `cql/HeadacheTriage.cql`; it includes `RulePatterns` and has the same output contract as the other modules (Proposed Level, New Level, Disposition).
 
 | What | In the engine |
 |---|---|
 | Headache present | Observation SNOMED CT 25064002 (Headache) answered “Yes” in the window; without it every output is null and the rule does not apply |
-| Pain score | LOINC 72514-3, as in SymptomTriage |
+| Pain score | LOINC 72514-3 (pain severity, 0–10 verbal numeric rating); the latest answered score in the window counts |
 | Screening questions | One Observation per question: code `urn:example:cql-demo:headache` + slug, `valueCodeableConcept` = LOINC LA33-6 (Yes) or LA32-8 (No) |
 | Time to peak | `onset-peak` with three local answers: `within-5-min`, `5-to-60-min`, `over-60-min` |
 | Similarity to usual headaches | `similarity`: `first-ever`, `different`, `usual` |
 | Age | `AgeInYears()` from `Patient.birthDate`; a scenario gives it as `birthDate` or as a whole `patient` resource |
 | Pregnancy, immunosuppression, cancer history | Profile facts: Observations with code `urn:example:cql-demo:profile` + slug, source MANUAL or Patient. In the demo they come from the **Patient background** tab |
-| Flags | One `define` per flag. They are not ValueSets: most of them combine answers (fever + neck, Ottawa, age ≥ 50 + new pain) |
+| “New” headache | The similarity answers that make a headache new (`first-ever`, `different`) form a ValueSet in `vocabulary.json` |
+| Flags | One `define` per flag, plus `Severe Pain` for NRS ≥ 8. They are not ValueSets: most of them combine answers (fever + neck, Ottawa, age ≥ 50 + new pain) |
 
 New building blocks in `RulePatterns`:
 
 - **Answered / Answered Yes.** A fact becomes a flag only with the value Yes, and an answer only when it has a value.
-- **From Record.** Profile facts also accept MANUAL, because a clinician enters them. Symptoms are still accepted only from Patient and RPM.
+- **From Record.** Profile facts also accept MANUAL, because a clinician enters them. Symptoms and answers are still accepted only from Patient and RPM.
 - **Dated Within(lookback).** The head-injury answer is recorded at the time of the conversation, and the date of the injury is its value (`valueDateTime`). The flag fires when that date is no older than 90 days. Symptoms stay in `Conversation Window(Last Run, 12 h)`.
 
 Outputs: Proposed Level, New Level (through Monotonic Escalation), Disposition, Ask Headache Screen, Ask Pain Score and **Fired Flags** — the list of codes of the flags that fired, for the alert text.
 
 ## Test scenarios
 
-Twenty scenarios cover every branch, every boundary (NRS 7/8, age 39/40 and 49/50, injury 90/91 days ago), missing data and an untrusted source. The base for all of them: headache “yes” in the window, every question “no”, similarity “like usual”, NRS 5, age 35, an empty profile, source Patient, Last Run and Current Level null.
+Twenty-one scenarios cover every branch, every boundary (NRS 7/8, age 39/40 and 49/50, injury 90/91 days ago), missing data, an untrusted source and the choice of the latest pain score. The base for all of them: headache “yes” in the window, every question “no”, similarity “like usual”, NRS 5, age 35, an empty profile, source Patient, Last Run and Current Level null.
 
 | # | Change from the base | Proposed Level | Disposition | What it checks |
 |---|---|---|---|---|
@@ -144,8 +145,9 @@ Twenty scenarios cover every branch, every boundary (NRS 7/8, age 39/40 and 49/5
 | H18 | `neuro-deficit` “yes” from source MANUAL | null | Ask headache screen | A clinician's entry is not the patient's answer |
 | H19 | Immunosuppression in the profile (MANUAL), first ever | Emergency escalation | Provider evaluation required | From Record accepts MANUAL for the profile |
 | H20 | Current Level = ED escalation, `within-5-min` | ED escalation | Emergency Department evaluation | New Level = null, no repeat alert |
+| H21 | Two pain scores: 9 earlier, 4 now | No escalation required | Reassure | The latest score counts, not the highest |
 
-H15–H18 also check Ask Headache Screen = true; H20 checks New Level = null. Scenarios 08 and 09 check the same “No is a fact” rule in SymptomTriage: a red-flag symptom answered “No”, and one recorded without a value, do not escalate.
+H15–H18 also check Ask Headache Screen = true; H20 checks New Level = null. Every base answer is an explicit “No”, so each scenario also checks that “No” never raises a flag.
 
 ## Owner decisions and evidence limits
 
@@ -155,7 +157,7 @@ The protocol is deliberately sensitive: most flags have low specificity on their
 |---|---|---|
 | Thunderclap threshold | Within 5 minutes, as in NICE | “Instantly”, within 1 minute, as in Ottawa; fewer false ED escalations |
 | “Severe” pain in the Ottawa branch | NRS ≥ 7 | No threshold: more sensitive, but more ED |
-| NRS ≥ 8 without flags | Urgent | Emergency, as in SymptomTriage; a PMC review lists high intensity among red flags |
+| NRS ≥ 8 without flags | Urgent | Emergency; a PMC review lists high intensity among red flags |
 | New headache in a young patient with no other signs | Urgent | No escalation with advice; SNNOOP10 counts it as a flag |
 | Typical aura in a patient with known migraine with aura | ED, as a neurological deficit | Do not count it if the aura is the same as always; NICE describes typical aura as fully reversible, developing over at least 5 minutes and lasting 5–60 minutes |
 | Head injury on anticoagulants | Emergency, like any injury | ED; check against NICE NG232 |

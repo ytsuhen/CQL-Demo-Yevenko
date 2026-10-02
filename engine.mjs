@@ -18,7 +18,7 @@ import ucum from "@lhncbc/ucum-lhc";
 // The FHIR R4 model: the same modelinfo the engine uses (cql-exec-fhir)
 import FHIR_MODELINFO from "cql-exec-fhir/lib/modelInfos/fhir-modelinfo-4.0.1.xml.js";
 
-export const DEFAULT_RULE = "SymptomTriage";
+export const DEFAULT_RULE = "HeadacheTriage";
 
 // ---------- compilation ----------
 
@@ -61,7 +61,7 @@ function quiet(fn) {
 }
 
 /**
- * Compiles a set of libraries { "SymptomTriage": "<CQL text>", … }.
+ * Compiles a set of libraries { "HeadacheTriage": "<CQL text>", … }.
  * Returns { elm: { Name: json }, errors: [{ library, line, col, message }] }.
  * Included libraries are resolved from the same sources.
  */
@@ -229,5 +229,7 @@ function show(v) {
   if (Array.isArray(v)) return v.every(isPrimitive) ? `[${v.join(", ")}]` : `${v.length} fact(s)`;
   if (v.low !== undefined && v.high !== undefined) return `[${v.low} .. ${v.high}]`;
   if (v.id && v.effective) return `Observation/${v.id.value ?? v.id} at ${v.effective.value ?? v.effective}`;
+  // A coded answer (FHIR CodeableConcept): its codes, e.g. within-5-min
+  if (Array.isArray(v.coding)) return v.coding.map(c => c.code?.value ?? c.code).join(", ");
   return String(v.value ?? v);
 }

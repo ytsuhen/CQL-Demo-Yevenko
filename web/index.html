@@ -574,14 +574,6 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
 .io table.trace td.fact { font-size: 13.5px; }
 .io table.trace td.code { font-family: var(--font-code); font-size: 12.5px; white-space: nowrap; }
 
-/* How it works: four steps, each opens its tab */
-.how { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.how button { width: 100%; height: 100%; text-align: left; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; align-content: start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; color: var(--ink); }
-.how button:hover { border-color: var(--accent); }
-.how .how-num { grid-row: span 2; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 13px; }
-.how b { font-size: 14.5px; }
-.how .txt { font-size: 13px; color: var(--muted); line-height: 1.4; }
-
 /* Chat head: the patient being played, and the progress of the questionnaire */
 .who { display: inline-flex; align-items: center; gap: 10px; background: none; border: 1px solid transparent; border-radius: 10px; padding: 4px 10px 4px 4px; color: var(--sea-ink); margin-right: auto; min-width: 0; max-width: 100%; text-align: left; }
 .who:hover { border-color: var(--sea-line); background: rgba(12, 67, 60, 0.5); }
@@ -657,7 +649,6 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   .work { grid-template-columns: minmax(0, 1fr); }
   .sim { grid-template-columns: minmax(0, 1fr); }
   .bg { grid-template-columns: minmax(0, 1fr); }
-  .how { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chat { height: 560px; }
   .ex-grid { grid-template-columns: minmax(0, 1fr); }
 }
@@ -665,10 +656,6 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   .page { padding-inline: 16px; }
   .CodeMirror, textarea.fallback { height: 380px; }
   .bg-editor .CodeMirror, .bg-editor textarea.fallback { height: 420px; }
-  .how { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .how button { padding: 10px 12px; align-items: center; }
-  .how .how-num { grid-row: auto; }
-  .how .txt { display: none; }
   .row2 { grid-template-columns: minmax(0, 1fr); }
 }
 </style>
@@ -682,13 +669,6 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
       <p>Clinical rules on open standards: CQL is the rule language, FHIR is the format for medical data. In <b>Patient chat</b>, answer a few questions as a patient and watch what data the engine receives and what it decides. <b>Patient background</b> sets who you are playing, as FHIR you can edit by hand. <b>Rules &amp; tests</b> shows the rules themselves and checks them against test patients. Everything runs right here, in your browser.</p>
     </div>
   </header>
-
-  <ol class="how" aria-label="How the demo works">
-    <li><button type="button" data-go="background" data-tip="Open Patient background: the age and medical history the rules read."><span class="how-num">1</span><b>Background</b><span class="txt">Age and medical history, stored as FHIR resources you can edit.</span></button></li>
-    <li><button type="button" data-go="chat" data-tip="Open Patient chat and answer as the patient."><span class="how-num">2</span><b>Chat</b><span class="txt">Every answer becomes a FHIR Observation with a standard code.</span></button></li>
-    <li><button type="button" data-go="rules" data-tip="Open Rules &amp; tests to read the CQL rules."><span class="how-num">3</span><b>Rules</b><span class="txt">CQL rules run on that data in your browser and pick the escalation level.</span></button></li>
-    <li><button type="button" data-go="rules" data-tip="Open Rules &amp; tests: every test patient is re-checked after each change."><span class="how-num">4</span><b>Tests</b><span class="txt"><span data-count="scenarios">All</span> test patients re-check every rule branch after any change.</span></button></li>
-  </ol>
 
   <nav class="views" role="tablist" aria-label="Demo mode">
     <button type="button" role="tab" id="tab-chat" aria-controls="view-chat" aria-selected="true" data-tip="Answer as a patient and see what the rule engine receives and what it decides.">Patient chat</button>
@@ -837,30 +817,30 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
           <li>Look at the fields: the patient’s facts and the expected result <code>expect</code>.</li>
           <li>Press “Compile &amp; run”.</li>
         </ol>
-        <p class="expect">Expected: <code data-expect="ex1">13 / 13</code>. This is how a UAT scenario is added: just facts and expectations.</p>
-        <div class="row"><button class="btn small" type="button" data-ex="1" data-tip="Adds scenario 06, a patient with moderate pain, and runs every check.">Add and run</button></div>
+        <p class="expect">Expected: <code data-expect="ex1">all passed</code>. This is how a UAT scenario is added: just facts and expectations.</p>
+        <div class="row"><button class="btn small" type="button" data-ex="1" data-tip="Adds a test patient whose headache gets worse with coughing (Urgent escalation) and runs every check.">Add and run</button></div>
       </article>
       <article class="ex">
         <span class="num">EXERCISE 2</span>
         <h3>Change a threshold and see what it affects</h3>
         <ol>
-          <li>Open <code>SymptomTriage.cql</code>.</li>
-          <li>On line 34 change <code>"Pain Now" &gt;= 8</code> to <code>&gt;= 9</code>.</li>
+          <li>Open <code>HeadacheTriage.cql</code> and find <code>define "Severe Pain"</code>.</li>
+          <li>Change <code>"Pain Now" &gt;= 8</code> to <code>&gt;= 9</code>.</li>
           <li>Run the scenarios.</li>
         </ol>
-        <p class="expect">Expected: <code data-expect="ex2">10 / 12</code>. Scenarios 01 and 02 fail and show Provider notification instead of Provider evaluation required.</p>
-        <div class="row"><button class="btn small" type="button" data-ex="2" data-tip="Raises the pain threshold on line 34 of SymptomTriage.cql from 8 to 9 and runs every check.">Change and run</button></div>
+        <p class="expect">Expected: <code data-expect="ex2">one fails</code>. Scenario h03 (pain 8, nothing else) fails: it now gets Reassure instead of Provider notification. The boundary test caught the change.</p>
+        <div class="row"><button class="btn small" type="button" data-ex="2" data-tip="Raises the severe-pain threshold in HeadacheTriage.cql (define “Severe Pain”) from 8 to 9 and runs every check.">Change and run</button></div>
       </article>
       <article class="ex">
         <span class="num">EXERCISE 3</span>
         <h3>Make a typo in a name</h3>
         <ol>
-          <li>On the same line 34 rename <code>"Pain Now"</code> to <code>"Pain Score"</code>.</li>
+          <li>In the same <code>define "Severe Pain"</code> rename <code>"Pain Now"</code> to <code>"Pain Score"</code>.</li>
           <li>Run the scenarios.</li>
           <li>Click the error: the editor jumps to that line.</li>
         </ol>
-        <p class="expect">Expected: an error with the file, line and column. Click it and the editor jumps to the exact spot.</p>
-        <div class="row"><button class="btn small" type="button" data-ex="3" data-tip="Renames “Pain Now” on line 34 to a name that does not exist and runs the checks, to show a compile error.">Break and run</button></div>
+        <p class="expect">Expected: an error with the file, line and column, plus the steps that depend on it. Click it and the editor jumps to the exact spot.</p>
+        <div class="row"><button class="btn small" type="button" data-ex="3" data-tip="Renames “Pain Now” in define “Severe Pain” to a name that does not exist and runs the checks, to show a compile error.">Break and run</button></div>
       </article>
     </div>
     <p class="hint">After the exercises press “Reset changes” to restore the files. Edits are stored only in your browser.</p>
@@ -884,26 +864,18 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
 (() => {
   "use strict";
   const SEED = JSON.parse(document.getElementById("seed").textContent);
-  const MAIN = "SymptomTriage";
+  const MAIN = "HeadacheTriage";
   // Saved edits are tied to the file version, so a new build is never hidden behind old edits
   const STORE_KEY = "cql-demo-files:" + SEED.version;
 
   const NOTES = {
-    "SymptomTriage.cql": "Clinical module: short, because the routine work lives in the pattern library.",
     "MoodScreening.cql": "Clinical module: depression (PHQ-9) and anxiety (GAD-7) screening. PHQ-9 item 9 is checked separately from the total score.",
     "HeadacheTriage.cql": "Clinical module: adult headache triage (NICE CG150, SNNOOP10, Ottawa SAH Rule). Red flags → ED, orange flags → Emergency or Urgent; the pain score counts only when no flag fired.",
     "RulePatterns.cql": "Pattern library: the building blocks every rule reuses — time window, trusted sources, latest value, upward-only escalation.",
     "FHIRHelpers.cql": "Standard HL7 helper library. No need to change it.",
-    "vocabulary.json": "ValueSets: set address → codes, e.g. the red-flag symptoms.",
+    "vocabulary.json": "ValueSets: set address → codes, e.g. the answers that make a headache “new”.",
   };
-  const SCENARIO_06 = {
-    name: "Moderate pain 5, no previous level -> Urgent escalation, provider notification",
-    now: "2026-10-01T20:00:00Z",
-    lastRun: "2026-10-01T18:00:00Z",
-    currentLevel: null,
-    facts: [{ kind: "pain", value: 5, at: "2026-10-01T19:40:00Z", source: "RPM" }],
-    expect: { "Pain Now": 5, "Proposed Level": "Urgent escalation", "New Level": "Urgent escalation", "Disposition": "Provider notification" },
-  };
+  const EXERCISE_FILE = "scenarios/h22-cough-makes-it-worse.json";
 
   // ---------- file model ----------
   const original = {};
@@ -911,13 +883,35 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   original["vocabulary.json"] = SEED.vocabulary;
   for (const [file, text] of Object.entries(SEED.scenarios)) original["scenarios/" + file] = text;
 
-  // The expected exercise totals depend on how many scenarios the repository has
-  const scenarioCount = Object.keys(original).filter(f => f.startsWith("scenarios/")).length;
-  const hasScenario06 = Object.keys(original).some(f => f.startsWith("scenarios/06-"));
-  const ex1Total = hasScenario06 ? scenarioCount : scenarioCount + 1;
-  document.querySelector('[data-expect="ex1"]').textContent = `${ex1Total} / ${ex1Total}`;
-  document.querySelector('[data-expect="ex2"]').textContent = `${scenarioCount - 2} / ${scenarioCount}`;
-  document.querySelector('[data-count="scenarios"]').textContent = String(scenarioCount);
+  // The expected exercise totals follow the scenarios there are right now
+  function renderExpectations() {
+    const count = Object.keys(files).filter(f => f.startsWith("scenarios/")).length;
+    const ex1 = EXERCISE_FILE in files ? count : count + 1;
+    document.querySelector('[data-expect="ex1"]').textContent = `${ex1} / ${ex1}`;
+    document.querySelector('[data-expect="ex2"]').textContent = `${count - 1} / ${count}`;
+  }
+
+  // A scenario file in the repository's layout: one fact per line
+  function formatScenario(s) {
+    const line = o => (Object.keys(o).length ? "{ " + Object.entries(o).map(([k, v]) => `${JSON.stringify(k)}: ${JSON.stringify(v)}`).join(", ") + " }" : "{}");
+    const parts = Object.entries(s).map(([k, v]) => {
+      if (k === "facts") return v.length ? `  "facts": [\n${v.map(f => "    " + line(f)).join(",\n")}\n  ]` : `  "facts": []`;
+      if (k === "expect") return `  "expect": ${line(v)}`;
+      return `  ${JSON.stringify(k)}: ${JSON.stringify(v, null, 2).replace(/\n/g, "\n  ")}`;
+    });
+    return "{\n" + parts.join(",\n") + "\n}\n";
+  }
+  // Exercise 1: the base headache patient (h01) with one answer changed
+  function exerciseScenario() {
+    let s;
+    try { s = JSON.parse(original["scenarios/h01-baseline.json"]); } catch (e) { s = null; }
+    if (!s || !Array.isArray(s.facts)) return { name: "New test patient", rule: MAIN, now: new Date().toISOString(), facts: [], expect: {} };
+    s.name = "Coughing makes the headache worse -> urgent escalation, provider notification";
+    const fact = s.facts.find(f => f.code === "valsalva-exertion");
+    if (fact) fact.answer = "Yes";
+    s.expect = { "Fired Flags": ["valsalva-exertion"], "Proposed Level": "Urgent escalation", "Disposition": "Provider notification" };
+    return s;
+  }
 
   let files = { ...original };
   try {
@@ -986,7 +980,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   const fallback = cm ? null : document.getElementById("editor");
   if (fallback) fallback.className = "fallback";
 
-  let current = "SymptomTriage.cql";
+  let current = MAIN + ".cql";
   let shown = null; // the file whose text the editor currently holds
   let marked = [];
   const modeFor = f => (f.endsWith(".cql") ? "cql" : "jsonlite");
@@ -1093,7 +1087,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     return g;
   }
   // Test patients grouped by the rule they test
-  const RULE_TITLES = { SymptomTriage: "Pain triage", HeadacheTriage: "Headache triage", MoodScreening: "Mood screening" };
+  const RULE_TITLES = { HeadacheTriage: "Headache triage", MoodScreening: "Mood screening" };
   const ruleCache = new Map();
   function ruleOf(f) {
     const text = files[f];
@@ -1145,6 +1139,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     add.textContent = "+ Scenario";
     add.addEventListener("click", () => addScenario());
     tabsEl.replaceChildren(group("Rules", o.rules), group("Data", o.data), group("Scenarios", [], [scenarioPicker(o.scen), add]));
+    renderExpectations();
   }
   tabsEl.addEventListener("keydown", ev => {
     if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
@@ -1160,7 +1155,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     const actions = document.getElementById("file-actions");
     actions.replaceChildren();
     if (current.startsWith("scenarios/")) {
-      note.textContent = "Test patient: the rule (SymptomTriage if omitted), the moment now, the previous run lastRun, the patient (birthDate) and any ready-made FHIR resources, the facts (pain, phq9, gad7 with a value; an answer such as Yes/No for headache, headache-screen, profile, phq9-item9 and symptom; a date for head-trauma) and the expectations expect.";
+      note.textContent = "Test patient: the rule (HeadacheTriage if omitted), the moment now, the previous run lastRun, the patient (birthDate) and any ready-made FHIR resources, the facts (pain, phq9, gad7 with a value; an answer such as Yes/No for headache, headache-screen, profile and phq9-item9; a date for head-trauma) and the expectations expect.";
       if (original[current] === undefined) {
         const del = document.createElement("button");
         del.type = "button";
@@ -1180,9 +1175,9 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
 
   function addScenario(text) {
     syncCurrent();
-    let n = 6, name;
-    do { name = `scenarios/${String(n).padStart(2, "0")}-${n === 6 ? "moderate-pain-urgent" : "new-scenario"}.json`; n++; } while (name in files);
-    files[name] = text || JSON.stringify(SCENARIO_06, null, 2) + "\n";
+    let name = EXERCISE_FILE;
+    for (let n = 2; name in files; n++) name = `scenarios/new-scenario-${n}.json`;
+    files[name] = text || formatScenario(exerciseScenario());
     save();
     openFile(name);
     return name;
@@ -1288,7 +1283,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   }
 
   // ---------- render results ----------
-  const openState = new Set(["scenarios/01-escalate-to-emergency.json"]);
+  const openState = new Set(["scenarios/h01-baseline.json"]);
 
   // 2026-10-01T13:55:00.000+00:00 -> 2026-10-01 13:55 UTC (easier to read in a trace)
   const readable = t => t.replace(/(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):\d{2}(?:\.\d+)?(?:\+00:00|Z)/g, "$1 $2 UTC");
@@ -1431,18 +1426,17 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     syncCurrent();
     const ex = b.dataset.ex;
     if (ex === "1") {
-      const existing = Object.keys(files).find(f => f.startsWith("scenarios/06-"));
-      if (existing) openFile(existing); else addScenario();
+      if (EXERCISE_FILE in files) openFile(EXERCISE_FILE); else addScenario();
       await run();
     } else {
-      const f = "SymptomTriage.cql";
+      const f = MAIN + ".cql";
       let text = files[f];
-      if (ex === "2") text = text.replace('when "Pain Now" >= 8 then', 'when "Pain Now" >= 9 then');
-      if (ex === "3") text = text.replace(/when "Pain Now" >= (8|9) then/, 'when "Pain Score" >= $1 then');
+      if (ex === "2") text = text.replace(/("Severe Pain":\s*\n\s*"Pain Now" >= )8/, "$19");
+      if (ex === "3") text = text.replace(/("Severe Pain":\s*\n\s*)"Pain Now"/, '$1"Pain Score"');
       replaceAll(f, text);
       save();
       await run();
-      const ln = lineOf(text, ex === "2" ? '>= 9 then' : '"Pain Score"');
+      const ln = lineOf(text, ex === "2" ? '"Pain Now" >= 9' : '"Pain Score"');
       if (ln > 0) goTo(f, ln, 1);
     }
   }));
@@ -1467,7 +1461,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     files = { ...original };
     for (const k of Object.keys(docs)) delete docs[k];
     try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }
-    current = "SymptomTriage.cql";
+    current = MAIN + ".cql";
     shown = null;
     openFile(current);
     await run();
@@ -1505,10 +1499,6 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     showView(next, true);
     viewTabs[next].focus();
   });
-  document.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => {
-    showView(b.dataset.go, true);
-    viewTabs[b.dataset.go].scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }));
 
   // ---------- patient background ----------
   // A FHIR Bundle: one Patient and the background facts as Observations. The form and the JSON editor
@@ -1981,7 +1971,6 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     { label: "marked anxiety", phq: [1, 1, 1, 1, 0, 0, 0, 0, 0], gad: [3, 2, 2, 2, 2, 2, 2] },
     { label: "thoughts of self-harm", phq: [1, 1, 1, 1, 0, 1, 1, 0, 1], gad: [1, 0, 1, 1, 0, 0, 0] },
   ];
-  const SYMPTOMS = { "161882006": { question: "a stiff neck (it is hard to touch your chest with your chin)", name: "stiff neck" } };
   const SYSTEMS = { "http://loinc.org": "LOINC", "http://snomed.info/sct": "SNOMED CT", "urn:example:cql-demo:headache": "local", "urn:example:cql-demo:profile": "local" };
   const SOURCE_NAMES = { Patient: "patient", MANUAL: "clinician", RPM: "device" };
   const DISPOSITIONS = {
@@ -1997,7 +1986,6 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   };
   // The engine outputs shown up front and saved as expectations; the rest stays in the full trace
   const KEY_OUTPUTS = {
-    SymptomTriage: ["Pain Now", "Red Flag Reported", "Proposed Level", "New Level", "Disposition"],
     MoodScreening: ["PHQ-9 Score", "PHQ-9 Severity", "GAD-7 Score", "GAD-7 Severity", "Self-harm Thoughts", "Proposed Level", "New Level", "Disposition"],
     HeadacheTriage: ["Age", "Pain Now", "Fired Flags", "Ask Headache Screen", "Proposed Level", "New Level", "Disposition"],
   };
@@ -2149,46 +2137,13 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
         `Hi! This is a demo chat: you answer as a patient, and the Input and Output panels show what data the rule engine received and what it decided.\nYou are playing ${nameOf(p) || "the patient"}, ${ageFrom(p.birthDate)}. Click the name above to change the age or medical background.\nWhat shall we check?`,
         [
           { label: "Headache", value: "headache", cls: "primary", tip: "Runs HeadacheTriage: an adult headache screen based on NICE CG150, SNNOOP10 and the Ottawa SAH Rule. It also reads the patient background." },
-          { label: "Pain and symptoms", value: "pain", tip: "Runs the SymptomTriage rule: a pain score and danger signs." },
           { label: "Mood and anxiety", value: "mood", tip: "Runs the MoodScreening rule: the PHQ-9 depression and GAD-7 anxiety questionnaires." },
         ],
       );
       if (my !== chatSession) return;
       if (topic === "headache") await headacheFlow(my);
-      else if (topic === "pain") await painFlow(my);
       else await moodFlow(my);
     })();
-  }
-
-  function redFlagSymptoms() {
-    let vocabulary = {};
-    try { vocabulary = JSON.parse(files["vocabulary.json"]); } catch (e) { return []; }
-    const url = Object.keys(vocabulary).find(u => u.includes("red-flag"));
-    return url ? vocabulary[url] : [];
-  }
-
-  async function painFlow(my) {
-    const pain = await ask(
-      "Please rate your pain right now, from 0 (no pain) to 10 (the worst pain you can imagine).",
-      [...Array(11).keys()].map(n => ({ label: String(n), value: n, cls: "num", tip: painTip(n) }))
-        .concat([{ label: "Prefer not to answer", value: null, cls: "muted", tip: "Send no pain score. The rule treats a missing answer as unknown, not as “no pain”, and asks for it." }]),
-    );
-    if (my !== chatSession) return;
-    const at = new Date().toISOString();
-    const facts = [];
-    if (pain != null) facts.push({ kind: "pain", value: pain, at, source: "Patient" });
-    for (const s of redFlagSymptoms()) {
-      const known = SYMPTOMS[s.code];
-      const answer = await ask(`Do you have ${known ? known.question : "“" + (s.display || s.code) + "”"} right now?`, [
-        { label: "Yes", value: "Yes", tip: "Report this symptom. It is on the red-flag list in vocabulary.json, so the rule goes straight to ED escalation." },
-        { label: "No", value: "No", tip: "Recorded as “No”: a real answer. Only a “Yes” counts as a red flag." },
-      ]);
-      if (my !== chatSession) return;
-      facts.push({ kind: "symptom", system: s.system, code: s.code, answer, at, source: "Patient" });
-    }
-    say("Thank you! Sending your answers to the rule engine…");
-    const chat = { rule: "SymptomTriage", facts, sentLevel: null };
-    if (await step(my, chat, false)) await conclude(my, chat);
   }
 
   async function moodFlow(my) {
@@ -2398,13 +2353,10 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
 
   function interpret(rule, out) {
     if (rule === "HeadacheTriage" && out.Applies !== "true") {
-      return { cls: "none", title: "No headache to assess", text: "The headache protocol starts only when you have a headache now, so the engine draws no conclusion and raises no alert. For other complaints, try “Pain and symptoms” or “Mood and anxiety”." };
+      return { cls: "none", title: "No headache to assess", text: "The headache protocol starts only when you have a headache now, so the engine draws no conclusion and raises no alert. For low mood or anxiety, try “Mood and anxiety”." };
     }
     const base = DISPOSITIONS[out.Disposition] || { cls: "ask", title: out.Disposition || "No decision", text: "This engine answer has no description on the page yet." };
     const v = { ...base };
-    if (out.Disposition === "Reassure" && rule === "SymptomTriage") {
-      v.text = "Your pain is mild and there are no danger signs. Continue your treatment plan and let us know if anything changes.";
-    }
     if (out.Disposition === "Reassure" && rule === "HeadacheTriage") {
       v.text = "Nothing in your answers needs a doctor now. Rest and follow your usual plan for headaches. Get help again if the headache suddenly becomes severe or changes, or if you notice weakness, numbness, trouble speaking, confusion or a seizure — then call emergency services.";
     }
@@ -2463,7 +2415,6 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     if (fact.kind === "phq9") return ["Depression: PHQ-9 total score (0–27)", String(fact.value), code, source];
     if (fact.kind === "gad7") return ["Anxiety: GAD-7 total score (0–21)", String(fact.value), code, source];
     if (fact.kind === "phq9-item9") return ["PHQ-9 item 9: thoughts of death or self-harm", `${fact.answer} (${obs.valueCodeableConcept.coding[0].code})`, code, source];
-    if (fact.kind === "symptom") return ["Symptom: " + ((SYMPTOMS[fact.code] && SYMPTOMS[fact.code].name) || fact.code), fact.answer || "present", code, source];
     if (fact.kind === "headache") return ["Headache now", fact.answer || emptyCell("no answer"), code, source];
     if (fact.kind === "headache-screen") {
       const q = HQ_BY_CODE[fact.code];
@@ -2568,13 +2519,12 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     const expect = {};
     for (const k of KEY_OUTPUTS[rule] || ["Disposition"]) if (k in r.out) expect[k] = typed(r.out[k]);
     const s = { ...r.scenario, name: `Chat: ${r.verdict.title} (${r.out.Disposition ?? "no decision"})`, expect };
-    if (rule === MAIN) delete s.rule;
     syncCurrent();
-    const slug = { SymptomTriage: "pain", MoodScreening: "mood", HeadacheTriage: "headache" }[rule] || "chat";
+    const slug = { MoodScreening: "mood", HeadacheTriage: "headache" }[rule] || "chat";
     let n = 30;
     let file;
     do { file = `scenarios/${n}-chat-${slug}.json`; n++; } while (file in files);
-    files[file] = JSON.stringify(s, null, 2) + "\n";
+    files[file] = formatScenario(s);
     save();
     renderTabs();
     return file;

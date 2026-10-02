@@ -45,8 +45,9 @@ code "Cancer history": 'cancer-history' from "Profile"
 // Answers that are not yes/no
 code "Within 5 min": 'within-5-min' from "Answer"
 code "5 to 60 min": '5-to-60-min' from "Answer"
-code "First ever": 'first-ever' from "Answer"
-code "Different": 'different' from "Answer"
+
+// Answers that make a headache "new": the first one like this, or different from the usual ones
+valueset "New or changed headache": 'urn:example:cql-demo:valueset:new-or-changed-headache'
 
 parameter "Last Run" DateTime
 parameter "Current Level" String
@@ -96,9 +97,8 @@ define "Onset Peak":
 define "Similarity To Usual":
   "Answer Of"([Observation: "Similarity"])
 
-// "New" pain: the first headache like this, or different from the usual ones
 define "New Or Changed Pain":
-  "Similarity To Usual" ~ "First ever" or "Similarity To Usual" ~ "Different"
+  "Similarity To Usual" in "New or changed headache"
 
 // ---------- red flags → ED escalation ----------
 
@@ -172,6 +172,10 @@ define "Valsalva Or Exertion":
 define "Cancer Flag":
   "On Record"([Observation: "Cancer history"]) and "New Or Changed Pain"
 
+// NRS 8 or more: a pain-relief plan is needed, not an ambulance
+define "Severe Pain":
+  "Pain Now" >= 8
+
 define "Vomiting Flag":
   "Said Yes"([Observation: "Vomiting"]) and "New Or Changed Pain"
 
@@ -224,7 +228,7 @@ define "Proposed Level":
         else null
       end
     when "Emergency Flag" then 'Emergency escalation'
-    when "Urgent Flag" or "Pain Now" >= 8 then 'Urgent escalation'
+    when "Urgent Flag" or "Severe Pain" then 'Urgent escalation'
     when not "Other Questions Answered" then null
     when "Pain Now" is not null then 'No escalation required'
     else null
@@ -241,7 +245,7 @@ define "Disposition":
     when "Red Flag" then 'Emergency Department evaluation'
     when not "ED Questions Answered" then 'Ask headache screen'
     when "Emergency Flag" then 'Provider evaluation required'
-    when "Urgent Flag" or "Pain Now" >= 8 then 'Provider notification'
+    when "Urgent Flag" or "Severe Pain" then 'Provider notification'
     when not "Other Questions Answered" then 'Ask headache screen'
     when "Pain Now" is not null then 'Reassure'
     else 'Ask pain score'
@@ -269,5 +273,5 @@ define "Fired Flags":
     if "Valsalva Or Exertion" then 'valsalva-exertion' else null,
     if "Cancer Flag" then 'cancer-history' else null,
     if "Vomiting Flag" then 'vomiting' else null,
-    if "Pain Now" >= 8 then 'severe-pain' else null
+    if "Severe Pain" then 'severe-pain' else null
   }) F where F is not null

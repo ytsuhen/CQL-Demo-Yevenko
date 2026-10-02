@@ -1,0 +1,29 @@
+{
+  "name": "Two pain scores, 9 earlier and 4 now -> the latest one counts, no escalation",
+  "rule": "HeadacheTriage",
+  "now": "2026-10-01T14:00:00Z",
+  "lastRun": null,
+  "currentLevel": null,
+  "birthDate": "1991-04-15",
+  "facts": [
+    { "kind": "headache", "answer": "Yes", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "co-exposure", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "onset-peak", "answer": "over-60-min", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "onset-exertion", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "similarity", "answer": "usual", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "neuro-deficit", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "altered-consciousness", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "fever", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "neck-stiffness", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "eye-pain-vision", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "worsening", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "head-trauma", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "positional", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "valsalva-exertion", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "progressive", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "headache-screen", "code": "vomiting", "answer": "No", "at": "2026-10-01T13:50:00Z", "source": "Patient" },
+    { "kind": "pain", "value": 9, "at": "2026-10-01T13:20:00Z", "source": "Patient" },
+    { "kind": "pain", "value": 4, "at": "2026-10-01T13:50:00Z", "source": "Patient" }
+  ],
+  "expect": { "Pain Now": 4, "Fired Flags": [], "Proposed Level": "No escalation required", "Disposition": "Reassure" }
+}

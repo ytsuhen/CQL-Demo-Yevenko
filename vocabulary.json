@@ -1,5 +1,6 @@
 {
-  "urn:example:cql-demo:valueset:red-flag-symptoms": [
-    { "system": "http://snomed.info/sct", "code": "161882006", "display": "Stiff neck" }
+  "urn:example:cql-demo:valueset:new-or-changed-headache": [
+    { "system": "urn:example:cql-demo:answer", "code": "first-ever", "display": "The first headache like this" },
+    { "system": "urn:example:cql-demo:answer", "code": "different", "display": "Different from the usual headaches" }
   ]
 }
