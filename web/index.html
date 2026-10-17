@@ -1784,11 +1784,14 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   // ---------- hexagon waves behind the chat ----------
   // A field of small hexagons whose brightness follows two slow travelling waves.
   // A decision message lights up the hexagons around it in its urgency colour.
+  // Drawn on the graphics card (WebGL2) in one draw call a frame, so the page itself stays free for the chat and the engine.
+  // Without a graphics card the same waves go on a 2D canvas, at a lower resolution, and their frame rate backs off
+  // so that they never take more than about a tenth of the page's time.
   const waves = (() => {
     const stage = document.getElementById("chat-stage");
-    const canvas = document.getElementById("chat-waves");
-    const ctx = canvas.getContext && canvas.getContext("2d");
-    if (!ctx) return { light() {}, redraw() {} };
+    let canvas = document.getElementById("chat-waves");
+    const none = { light() {}, redraw() {} };
+    if (!stage || !canvas || !canvas.getContext) return none;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const R = 7; // hexagon radius in CSS pixels
     const STEP_X = Math.sqrt(3) * R;
@@ -1800,112 +1803,297 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     for (let i = 0; i < 256; i++) { PERM[i] = i; VALUES[i] = random() * 2 - 1; }
     for (let i = 255; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [PERM[i], PERM[j]] = [PERM[j], PERM[i]]; }
-    const hash = (x, y, z) => VALUES[PERM[(PERM[(PERM[x & 255] + y) & 255] + z) & 255]];
-    const smooth = v => v * v * (3 - 2 * v);
-    const lerp = (a, b, k) => a + (b - a) * k;
-    function noise(x, y, z) { // -1..1
-      const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
-      const u = smooth(x - xi), v = smooth(y - yi), w = smooth(z - zi);
-      const corner = (dx, dy, dz) => hash(xi + dx, yi + dy, zi + dz);
-      return lerp(
-        lerp(lerp(corner(0, 0, 0), corner(1, 0, 0), u), lerp(corner(0, 1, 0), corner(1, 1, 0), u), v),
-        lerp(lerp(corner(0, 0, 1), corner(1, 0, 1), u), lerp(corner(0, 1, 1), corner(1, 1, 1), u), v),
-        w,
-      );
-    }
-    const HEX = new Path2D();
-    for (let i = 0; i < 6; i++) {
-      const a = (Math.PI / 3) * i - Math.PI / 6;
-      const x = Math.cos(a) * R * 0.82;
-      const y = Math.sin(a) * R * 0.82;
-      if (i) HEX.lineTo(x, y); else HEX.moveTo(x, y);
-    }
-    HEX.closePath();
     const BASE = [7, 89, 74]; // --sea-wave
     const CREST = [63, 181, 154]; // --sea-crest
+    const MAX_LIGHTS = 16; // the newest glows on screen; older ones have long faded into the waves
     const glows = [];
-    let cells = [];
+    let cells = new Float32Array(0);
     let width = 0;
     let height = 0;
-    let dpr = 1;
 
     const rgbOf = name => {
       const m = getComputedStyle(document.documentElement).getPropertyValue(name).trim().match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
       return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : CREST;
     };
 
-    function resize() {
-      const box = stage.getBoundingClientRect();
-      width = box.width;
-      height = box.height;
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.max(1, Math.round(width * dpr));
-      canvas.height = Math.max(1, Math.round(height * dpr));
-      cells = [];
-      // a margin around the edges, so moving hexagons never leave gaps there
-      for (let y = -2 * R, row = 0; y < height + 2 * R; y += STEP_Y, row++) {
-        for (let x = -2 * R + (row % 2) * STEP_X / 2; x < width + 2 * R; x += STEP_X) cells.push(x, y);
-      }
-      draw(performance.now());
-    }
-
-    function draw(now) {
-      if (!width || !height) return;
-      const t = reduced.matches ? 0 : now / 1000;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // The glows around decision messages, newest first; a message scrolled far out of view lights nothing
+    function lightsAt(now) {
       const box = stage.getBoundingClientRect();
       const lights = [];
       for (let i = glows.length - 1; i >= 0; i--) {
         const g = glows[i];
         if (!g.el.isConnected) { glows.splice(i, 1); continue; }
         const r = g.el.getBoundingClientRect();
-        lights.push({
-          x: r.left - box.left + r.width / 2,
-          y: r.top - box.top + r.height / 2,
-          reach: Math.max(r.width, r.height) * 0.7 + 60,
-          rgb: g.rgb,
-          power: reduced.matches ? 1 : Math.min(1, (now - g.born) / 1400),
-        });
+        if (!r.width) continue;
+        const reach = Math.max(r.width, r.height) * 0.7 + 60;
+        const x = r.left - box.left + r.width / 2;
+        const y = r.top - box.top + r.height / 2;
+        const edge = reach * 1.7;
+        if (x < -edge || y < -edge || x > width + edge || y > height + edge) continue;
+        lights.push({ x, y, reach, rgb: g.rgb, power: reduced.matches ? 1 : Math.min(1, (now - g.born) / 1400) });
       }
-      for (let i = 0; i < cells.length; i += 2) {
-        const x0 = cells[i];
-        const y0 = cells[i + 1];
-        // A lake in a light breeze: irregular ripples that slowly appear and melt away
-        // (two octaves of noise), under even slower drifting gusts where they catch a bit more light.
-        const n1 = noise(x0 * 0.045, y0 * 0.045, t * 0.2);
-        const n2 = noise(x0 * 0.11 + 31.7, y0 * 0.11 - 12.3, t * 0.33);
-        const gust = 0.5 + 0.5 * noise(x0 * 0.007 + 5.1, y0 * 0.007 + 9.7, t * 0.04);
-        const ripple = 0.65 * n1 + 0.35 * n2; // roughly -1..1
-        const lift = 0.5 + 0.5 * ripple;
-        const light = lift * (0.4 + 0.6 * gust);
-        const glint = (lift < 0.7 ? 0 : ((lift - 0.7) / 0.3) ** 2) * gust; // rare, soft
-        const mix = Math.min(1, 0.1 + 0.42 * light + 0.4 * glint);
-        // Each hexagon barely sways with the water around it
-        const x = x0 + 1.4 * n2;
-        const y = y0 + 1.4 * n1;
-        const size = (0.8 + 0.16 * light) * dpr;
-        const tilt = 0.12 * n2;
-        let r = BASE[0] + (CREST[0] - BASE[0]) * mix;
-        let g = BASE[1] + (CREST[1] - BASE[1]) * mix;
-        let b = BASE[2] + (CREST[2] - BASE[2]) * mix;
-        let a = 0.1 + 0.2 * light + 0.22 * glint;
-        for (const L of lights) {
-          const d = Math.hypot(x - L.x, y - L.y);
-          if (d > L.reach * 1.7) continue;
-          // the halo breathes and ripples outwards from the message
-          const k = Math.exp(-((d / L.reach) ** 2) * 1.3) * L.power * (0.72 + 0.28 * Math.sin(t * 2.4 - d * 0.045));
-          r += (L.rgb[0] - r) * k;
-          g += (L.rgb[1] - g) * k;
-          b += (L.rgb[2] - b) * k;
-          a += (0.9 - a) * k;
+      return lights;
+    }
+
+    function webgl() {
+      let gl = null;
+      // only a real graphics card: a software WebGL would be slower than the 2D fallback
+      const caveat = !window.__wavesAnyGL;
+      try {
+        gl = canvas.getContext("webgl2", { alpha: true, premultipliedAlpha: true, antialias: true, depth: false, stencil: false, failIfMajorPerformanceCaveat: caveat });
+      } catch (e) { gl = null; }
+      if (!gl) return null;
+      const VS = `#version 300 es
+precision highp float;
+precision highp int;
+in vec2 aCorner;
+in vec2 aCell;
+uniform vec2 uView;
+uniform float uT;
+uniform int uNL;
+uniform vec4 uL[${MAX_LIGHTS}];
+uniform vec4 uLC[${MAX_LIGHTS}];
+uniform ivec4 uPerm[64];
+uniform vec4 uVal[64];
+out vec4 vColor;
+int perm(int i) { i = i & 255; return uPerm[i >> 2][i & 3]; }
+float hash(int x, int y, int z) { int k = perm(perm(perm(x) + y) + z); return uVal[k >> 2][k & 3]; }
+float noise(vec3 p) {
+  vec3 f = floor(p);
+  ivec3 i = ivec3(f);
+  vec3 u = p - f;
+  u = u * u * (3.0 - 2.0 * u);
+  return mix(
+    mix(mix(hash(i.x, i.y, i.z), hash(i.x + 1, i.y, i.z), u.x), mix(hash(i.x, i.y + 1, i.z), hash(i.x + 1, i.y + 1, i.z), u.x), u.y),
+    mix(mix(hash(i.x, i.y, i.z + 1), hash(i.x + 1, i.y, i.z + 1), u.x), mix(hash(i.x, i.y + 1, i.z + 1), hash(i.x + 1, i.y + 1, i.z + 1), u.x), u.y),
+    u.z);
+}
+void main() {
+  float x0 = aCell.x, y0 = aCell.y;
+  float n1 = noise(vec3(x0 * 0.045, y0 * 0.045, uT * 0.2));
+  float n2 = noise(vec3(x0 * 0.11 + 31.7, y0 * 0.11 - 12.3, uT * 0.33));
+  float gust = 0.5 + 0.5 * noise(vec3(x0 * 0.007 + 5.1, y0 * 0.007 + 9.7, uT * 0.04));
+  float lift = 0.5 + 0.5 * (0.65 * n1 + 0.35 * n2);
+  float light = lift * (0.4 + 0.6 * gust);
+  float g = lift < 0.7 ? 0.0 : (lift - 0.7) / 0.3;
+  float glint = g * g * gust;
+  float m = min(1.0, 0.1 + 0.42 * light + 0.4 * glint);
+  vec2 c = vec2(x0 + 1.4 * n2, y0 + 1.4 * n1);
+  vec3 base = vec3(${BASE.join(".0, ")}.0);
+  vec3 rgb = base + (vec3(${CREST.join(".0, ")}.0) - base) * m;
+  float a = 0.1 + 0.2 * light + 0.22 * glint;
+  for (int i = 0; i < ${MAX_LIGHTS}; i++) {
+    if (i >= uNL) break;
+    vec4 L = uL[i];
+    float d = distance(c, L.xy);
+    if (d > L.z * 1.7) continue;
+    float q = d / L.z;
+    float k = exp(-(q * q) * 1.3) * L.w * (0.72 + 0.28 * sin(uT * 2.4 - d * 0.045));
+    rgb += (uLC[i].rgb - rgb) * k;
+    a += (0.9 - a) * k;
+  }
+  float size = 0.8 + 0.16 * light;
+  float tilt = 0.12 * n2;
+  float cs = cos(tilt) * size, sn = sin(tilt) * size;
+  vec2 pos = c + vec2(cs * aCorner.x - sn * aCorner.y, sn * aCorner.x + cs * aCorner.y);
+  gl_Position = vec4(pos.x / uView.x * 2.0 - 1.0, 1.0 - pos.y / uView.y * 2.0, 0.0, 1.0);
+  vColor = vec4(floor(rgb) / 255.0, clamp(a, 0.0, 1.0));
+}`;
+      const FS = `#version 300 es
+precision mediump float;
+in vec4 vColor;
+out vec4 outColor;
+void main() { outColor = vec4(vColor.rgb * vColor.a, vColor.a); }`;
+      let U = {};
+      let cellBuf = null;
+      let lost = false;
+      let sized = false;
+      const LA = new Float32Array(MAX_LIGHTS * 4);
+      const LC = new Float32Array(MAX_LIGHTS * 4);
+      function setup() {
+        const shader = (type, src) => {
+          const s = gl.createShader(type);
+          gl.shaderSource(s, src);
+          gl.compileShader(s);
+          if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) || "shader");
+          return s;
+        };
+        const prog = gl.createProgram();
+        gl.attachShader(prog, shader(gl.VERTEX_SHADER, VS));
+        gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, FS));
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog) || "link");
+        gl.useProgram(prog);
+        U = {};
+        for (const n of ["uView", "uT", "uNL", "uL", "uLC", "uPerm", "uVal"]) U[n] = gl.getUniformLocation(prog, n);
+        gl.uniform4iv(U.uPerm, Int32Array.from(PERM));
+        gl.uniform4fv(U.uVal, VALUES);
+        gl.bindVertexArray(gl.createVertexArray());
+        const corners = new Float32Array(12);
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI / 3) * i - Math.PI / 6;
+          corners[2 * i] = Math.cos(a) * R * 0.82;
+          corners[2 * i + 1] = Math.sin(a) * R * 0.82;
         }
-        const cos = Math.cos(tilt) * size;
-        const sin = Math.sin(tilt) * size;
-        ctx.setTransform(cos, sin, -sin, cos, x * dpr, y * dpr);
-        ctx.fillStyle = `rgba(${r | 0},${g | 0},${b | 0},${a.toFixed(3)})`;
-        ctx.fill(HEX);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, corners, gl.STATIC_DRAW);
+        const aCorner = gl.getAttribLocation(prog, "aCorner");
+        gl.enableVertexAttribArray(aCorner);
+        gl.vertexAttribPointer(aCorner, 2, gl.FLOAT, false, 0, 0);
+        cellBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, cellBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, cells, gl.STATIC_DRAW);
+        const aCell = gl.getAttribLocation(prog, "aCell");
+        gl.enableVertexAttribArray(aCell);
+        gl.vertexAttribPointer(aCell, 2, gl.FLOAT, false, 0, 0);
+        gl.vertexAttribDivisor(aCell, 1);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.clearColor(0, 0, 0, 0);
+        sized = false;
       }
+      try { setup(); } catch (e) {
+        // this canvas is now tied to WebGL; a fresh copy lets the 2D fallback draw instead
+        const fresh = canvas.cloneNode(false);
+        canvas.replaceWith(fresh);
+        canvas = fresh;
+        return null;
+      }
+      canvas.addEventListener("webglcontextlost", e => { e.preventDefault(); lost = true; });
+      canvas.addEventListener("webglcontextrestored", () => {
+        try { setup(); lost = false; resize(); } catch (e) { /* the chat still works without its waves */ }
+      });
+      return {
+        dpr: () => Math.min(window.devicePixelRatio || 1, 2),
+        frameMs: 33, // ~30 fps is plenty for slow waves
+        resized() {
+          sized = false;
+          if (lost) return;
+          gl.bindBuffer(gl.ARRAY_BUFFER, cellBuf);
+          gl.bufferData(gl.ARRAY_BUFFER, cells, gl.STATIC_DRAW);
+        },
+        draw(t, lights) {
+          if (lost) return;
+          if (!sized) { gl.viewport(0, 0, canvas.width, canvas.height); sized = true; }
+          gl.clear(gl.COLOR_BUFFER_BIT);
+          gl.uniform2f(U.uView, width, height);
+          gl.uniform1f(U.uT, t);
+          const n = Math.min(MAX_LIGHTS, lights.length);
+          for (let i = 0; i < n; i++) {
+            const L = lights[i];
+            LA[4 * i] = L.x; LA[4 * i + 1] = L.y; LA[4 * i + 2] = L.reach; LA[4 * i + 3] = L.power;
+            LC[4 * i] = L.rgb[0]; LC[4 * i + 1] = L.rgb[1]; LC[4 * i + 2] = L.rgb[2];
+          }
+          gl.uniform1i(U.uNL, n);
+          if (n) { gl.uniform4fv(U.uL, LA); gl.uniform4fv(U.uLC, LC); }
+          gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 6, cells.length / 2);
+        },
+      };
+    }
+
+    // Fallback without a graphics card: the same waves on the 2D canvas, at CSS resolution,
+    // and the frame rate backs off when drawing gets slow
+    function canvas2d() {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      const hash = (x, y, z) => VALUES[PERM[(PERM[(PERM[x & 255] + y) & 255] + z) & 255]];
+      const smooth = v => v * v * (3 - 2 * v);
+      const lerp = (a, b, k) => a + (b - a) * k;
+      function noise(x, y, z) { // -1..1
+        const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+        const u = smooth(x - xi), v = smooth(y - yi), w = smooth(z - zi);
+        const corner = (dx, dy, dz) => hash(xi + dx, yi + dy, zi + dz);
+        return lerp(
+          lerp(lerp(corner(0, 0, 0), corner(1, 0, 0), u), lerp(corner(0, 1, 0), corner(1, 1, 0), u), v),
+          lerp(lerp(corner(0, 0, 1), corner(1, 0, 1), u), lerp(corner(0, 1, 1), corner(1, 1, 1), u), v),
+          w,
+        );
+      }
+      const HEX = new Path2D();
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i - Math.PI / 6;
+        const x = Math.cos(a) * R * 0.82;
+        const y = Math.sin(a) * R * 0.82;
+        if (i) HEX.lineTo(x, y); else HEX.moveTo(x, y);
+      }
+      HEX.closePath();
+      return {
+        dpr: () => 1,
+        frameMs: 50,
+        resized() {},
+        draw(t, lights) {
+          const t0 = performance.now();
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          for (let i = 0; i < cells.length; i += 2) {
+            const x0 = cells[i];
+            const y0 = cells[i + 1];
+            // A lake in a light breeze: irregular ripples that slowly appear and melt away
+            // (two octaves of noise), under even slower drifting gusts where they catch a bit more light.
+            const n1 = noise(x0 * 0.045, y0 * 0.045, t * 0.2);
+            const n2 = noise(x0 * 0.11 + 31.7, y0 * 0.11 - 12.3, t * 0.33);
+            const gust = 0.5 + 0.5 * noise(x0 * 0.007 + 5.1, y0 * 0.007 + 9.7, t * 0.04);
+            const ripple = 0.65 * n1 + 0.35 * n2; // roughly -1..1
+            const lift = 0.5 + 0.5 * ripple;
+            const light = lift * (0.4 + 0.6 * gust);
+            const glint = (lift < 0.7 ? 0 : ((lift - 0.7) / 0.3) ** 2) * gust; // rare, soft
+            const mix = Math.min(1, 0.1 + 0.42 * light + 0.4 * glint);
+            // Each hexagon barely sways with the water around it
+            const x = x0 + 1.4 * n2;
+            const y = y0 + 1.4 * n1;
+            const size = 0.8 + 0.16 * light;
+            const tilt = 0.12 * n2;
+            let r = BASE[0] + (CREST[0] - BASE[0]) * mix;
+            let g = BASE[1] + (CREST[1] - BASE[1]) * mix;
+            let b = BASE[2] + (CREST[2] - BASE[2]) * mix;
+            let a = 0.1 + 0.2 * light + 0.22 * glint;
+            for (const L of lights) {
+              const d = Math.hypot(x - L.x, y - L.y);
+              if (d > L.reach * 1.7) continue;
+              // the halo breathes and ripples outwards from the message
+              const k = Math.exp(-((d / L.reach) ** 2) * 1.3) * L.power * (0.72 + 0.28 * Math.sin(t * 2.4 - d * 0.045));
+              r += (L.rgb[0] - r) * k;
+              g += (L.rgb[1] - g) * k;
+              b += (L.rgb[2] - b) * k;
+              a += (0.9 - a) * k;
+            }
+            const cos = Math.cos(tilt) * size;
+            const sin = Math.sin(tilt) * size;
+            ctx.setTransform(cos, sin, -sin, cos, x, y);
+            ctx.fillStyle = `rgba(${r | 0},${g | 0},${b | 0},${a.toFixed(3)})`;
+            ctx.fill(HEX);
+          }
+          // script is about half of the cost and painting the shapes the rest, so this keeps the waves near a tenth of the page's time
+          this.frameMs = Math.min(400, Math.max(50, (performance.now() - t0) * 10));
+        },
+      };
+    }
+
+    const gpu = webgl();
+    const painter = gpu || canvas2d();
+    if (!painter) return none;
+    canvas.dataset.renderer = gpu ? "webgl2" : "2d";
+
+    function draw(now) {
+      if (!width || !height) return;
+      painter.draw(reduced.matches ? 0 : now / 1000, lightsAt(now));
+    }
+
+    function resize() {
+      const box = stage.getBoundingClientRect();
+      width = box.width;
+      height = box.height;
+      const dpr = painter.dpr();
+      canvas.width = Math.max(1, Math.round(width * dpr));
+      canvas.height = Math.max(1, Math.round(height * dpr));
+      const list = [];
+      // a margin around the edges, so moving hexagons never leave gaps there
+      for (let y = -2 * R, row = 0; y < height + 2 * R; y += STEP_Y, row++) {
+        for (let x = -2 * R + (row % 2) * STEP_X / 2; x < width + 2 * R; x += STEP_X) list.push(x, y);
+      }
+      cells = Float32Array.from(list);
+      painter.resized();
+      draw(performance.now());
     }
 
     let running = false;
@@ -1913,7 +2101,8 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
     function frame(now) {
       if (!running) return;
       requestAnimationFrame(frame);
-      if (now - lastFrame < 33 || !stage.offsetParent) return; // ~30 fps is plenty; idle while the tab is hidden
+      // idle while the chat is not on screen or the tab is hidden
+      if (now - lastFrame < painter.frameMs || document.hidden || !stage.offsetParent) return;
       lastFrame = now;
       draw(now);
     }
