@@ -8,22 +8,26 @@
 
 **Andrii Yevenko** · [yevenko.a.p@gmail.com](mailto:yevenko.a.p@gmail.com)
 
-A portfolio project. It shows how clinical decision rules can be written in an open standard, tested like code and explained to people who never read code.
+A portfolio project. It shows how clinical decision rules can be written in an open standard, tested like code and explained to people who never read code. It is for clinical and product teams who need decision logic they can read, test and trace back to the data.
+
+**Who did what.** The clinical logic, the rules and the review are mine: the [headache protocol](docs/headache-triage-protocol.md), the questions and their order, the thresholds and escalation levels, what happens when data is missing, and the test patients every branch must pass. The code was written by AI coding agents (Claude Code) working to my rules: the CQL, the engine, the web page and CI. I am an emergency physician with 7 years as a physician analyst in US healthtech.
 
 Two clinical rules — an adult [headache triage protocol](docs/headache-triage-protocol.md) built on NICE CG150, SNNOOP10 and the Ottawa SAH Rule, and depression/anxiety screening with PHQ-9 and GAD-7 — are written in [CQL](https://cql.hl7.org/) (HL7 Clinical Quality Language) over FHIR R4 data. Every rule is checked against test patients on each change, and a patient-facing chat shows exactly what goes into the rule engine and what comes out.
 
-**What I did**
+**What is in the project**
 
-- Wrote two clinical modules and a shared pattern library in CQL: time windows, trusted data sources, latest value, upward-only escalation, explicit handling of missing data (“No” is a fact; a question without a value is not an answer).
-- Turned an evidence-based headache triage protocol (NICE CG150, SNNOOP10, Ottawa SAH Rule, StatPearls) into a CQL module: red flags → ED, orange flags → Emergency or Urgent, ED-level questions asked first, every fired flag returned for the alert text, and 25 tests for every branch and boundary (age 39/40 and 49/50, pain 7/8, head injury 90/91 days).
-- Made the questioning adaptive inside the rule itself: CQL returns the questions whose answer can still change the level, so the chat never asks one that cannot change the advice (a headache like the usual ones takes 10 questions instead of 16).
-- Modelled the patient background in FHIR (`Patient.birthDate` plus profile Observations) and made it editable in the page both as a form and as raw JSON.
-- Mapped patient facts to FHIR `Observation`s with LOINC and SNOMED CT codes and UCUM units, including coded PHQ-9 answers.
-- Built a test harness: test patients are plain JSON (facts + expected results), so clinical analysts can add cases without writing code.
-- Bundled the reference CQL compiler and engine for the browser and built the web demo: a patient chat with input/output panels and a rule editor that recompiles and re-runs every test in the page.
-- Set up CI on GitHub Actions (Node 20, 22, 24) that publishes the demo to GitHub Pages only when every scenario passes.
+- Two clinical modules and a shared pattern library in CQL: time windows, trusted data sources, latest value, upward-only escalation, explicit handling of missing data (“No” is a fact; a question without a value is not an answer).
+- An evidence-based headache triage protocol (NICE CG150, SNNOOP10, Ottawa SAH Rule, StatPearls) turned into a CQL module: red flags → ED, orange flags → Emergency or Urgent, ED-level questions asked first, every fired flag returned for the alert text, and 25 tests for every branch and boundary (age 39/40 and 49/50, pain 7/8, head injury 90/91 days).
+- Adaptive questioning inside the rule itself: CQL returns the questions whose answer can still change the level, so the chat never asks one that cannot change the advice (a headache like the usual ones takes 10 questions instead of 16).
+- The patient background modelled in FHIR (`Patient.birthDate` plus profile Observations), editable in the page both as a form and as raw JSON.
+- Patient facts mapped to FHIR `Observation`s with LOINC and SNOMED CT codes and UCUM units, including coded PHQ-9 answers.
+- A test harness: test patients are plain JSON (facts + expected results), so clinical analysts can add cases without writing code.
+- The reference CQL compiler and engine bundled for the browser, and the web demo: a patient chat with input/output panels and a rule editor that recompiles and re-runs every test in the page.
+- CI on GitHub Actions (Node 20, 22, 24) that publishes the demo to GitHub Pages only when every scenario passes.
 
-**Skills shown:** FHIR R4 · CQL / ELM · LOINC · SNOMED CT · UCUM · clinical logic with tests (headache red flags, PHQ-9, GAD-7) · turning clinical guidelines into executable rules · three-valued logic and missing data · JavaScript (Node.js, esbuild, Canvas) · GitHub Actions CI · in-browser compiler
+**Skills shown:** turning clinical guidelines into executable rules · clinical logic with tests (headache red flags, PHQ-9, GAD-7) · three-valued logic and missing data · FHIR R4 · CQL / ELM · LOINC · SNOMED CT · UCUM · directing AI coding agents and reviewing their work
+
+**Built by the agents:** JavaScript (Node.js, esbuild, Canvas) · GitHub Actions CI · in-browser compiler
 
 ## The demo
 
