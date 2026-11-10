@@ -373,6 +373,7 @@ a { color: var(--accent); }
 .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
 .brand h1 { font-family: var(--font-title); font-weight: 600; font-size: clamp(26px, 3.2vw, 34px); line-height: 1.15; }
 .brand p { margin: 0; color: var(--muted); }
+.brand p.byline { font-size: 13px; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--radius); padding: 9px 14px; font-weight: 500; }
 .btn:hover { border-color: var(--accent); }
@@ -667,6 +668,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
       <span class="eyebrow">FHIR R4 · CQL · Clinical decision support</span>
       <h1>Clinical rules in CQL</h1>
       <p>Clinical rules on open standards: CQL is the rule language, FHIR is the format for medical data. In <b>Patient chat</b>, answer a few questions as a patient and watch what data the engine receives and what it decides. <b>Patient background</b> sets who you are playing, as FHIR you can edit by hand. <b>Rules &amp; tests</b> shows the rules themselves and checks them against test patients. Everything runs right here, in your browser.</p>
+      <p class="byline">A portfolio demo by Andrii Yevenko, emergency physician. Not medical advice: the escalation levels are illustrative and all patients are synthetic.</p>
     </div>
   </header>
 
@@ -851,7 +853,7 @@ pre.json { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 var(--fo
   <footer>
     <span>The escalation levels in the rules are illustrative: this demonstrates an approach, not a clinical recommendation. The PHQ-9 and GAD-7 severity cut-offs are the published ones; the headache screen follows NICE CG150, SNNOOP10 and the Ottawa SAH Rule (<a href="https://github.com/ytsuhen/CQL-Demo-Yevenko/blob/main/docs/headache-triage-protocol.md">protocol</a>). All patients are synthetic.</span>
     <span>Compiler: @cqframework/cql 5.4.0 (the cqframework reference translator). Engine: cql-execution 3.3.2 + cql-exec-fhir 2.2.0. FHIR R4.</span>
-    <span>Clinical logic and review: Andrii Yevenko · <a href="mailto:yevenko.a.p@gmail.com">yevenko.a.p@gmail.com</a>. The code was written by AI coding agents (Claude Code) to his requirements.</span>
+    <span>Clinical decisions and review: Andrii Yevenko · <a href="mailto:yevenko.a.p@gmail.com">yevenko.a.p@gmail.com</a>. The protocol draft, the rules and the code were written by AI coding agents (Claude Code) to his requirements.</span>
     <span>Code, rules and scenarios: <a href="https://github.com/ytsuhen/CQL-Demo-Yevenko">github.com/ytsuhen/CQL-Demo-Yevenko</a>. The page is rebuilt from the repository after every change.</span>
   </footer>
 </div>

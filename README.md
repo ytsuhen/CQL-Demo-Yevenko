@@ -10,7 +10,7 @@
 
 A portfolio project. It shows how clinical decision rules can be written in an open standard, tested like code and explained to people who never read code. It is for clinical and product teams who need decision logic they can read, test and trace back to the data.
 
-**Who did what.** The clinical logic and its review are mine: the [headache protocol](docs/headache-triage-protocol.md) (the rules in plain language), the questions and their order, the thresholds and escalation levels, what happens when data is missing, and the test patients every branch must pass. The code was written by AI coding agents (Claude Code) to my requirements: the CQL that implements the protocol, the engine, the web page and CI. I am an emergency physician with 7 years as a physician analyst in US healthtech.
+**Who did what.** I set the task, made the clinical decisions and reviewed the result as a physician: the [headache protocol](docs/headache-triage-protocol.md) marks them as owner decisions. The protocol draft from the guidelines, the CQL, the test patients, the engine, the web page and CI were written by AI coding agents (Claude Code) to my requirements. I am an emergency physician with 7 years as a physician analyst in US healthtech.
 
 Two clinical rules — an adult [headache triage protocol](docs/headache-triage-protocol.md) built on NICE CG150, SNNOOP10 and the Ottawa SAH Rule, and depression/anxiety screening with PHQ-9 and GAD-7 — are written in [CQL](https://cql.hl7.org/) (HL7 Clinical Quality Language) over FHIR R4 data. Every rule is checked against test patients on each change, and a patient-facing chat shows exactly what goes into the rule engine and what comes out.
 
